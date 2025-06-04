@@ -45,41 +45,18 @@ export const extractedTasks = pgTable("extracted_tasks", {
 
 export const dailySummaries = pgTable("daily_summaries", {
   id: serial("id").primaryKey(),
-  date: text("date").notNull(), // YYYY-MM-DD format
-  requiresResponse: jsonb("requires_response").$type<Array<{
-    chatTitle: string;
-    senderName: string;
-    text: string;
-    timestamp: string;
-    messageId: string;
-    chatId: string;
-  }>>().default([]),
-  importantDiscussions: jsonb("important_discussions").$type<Array<{
-    chatTitle: string;
-    senderName: string;
-    text: string;
-    timestamp: string;
-    messageId: string;
-    chatId: string;
-  }>>().default([]),
-  keyDecisions: jsonb("key_decisions").$type<Array<{
-    chatTitle: string;
-    senderName: string;
-    text: string;
-    timestamp: string;
-    messageId: string;
-    chatId: string;
-  }>>().default([]),
+  date: text("date").notNull().unique(),
+  summary: text("summary"),
+  requiresResponse: text("requires_response").array(),
+  keyTopics: text("key_topics").array(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const aiInsights = pgTable("ai_insights", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // 'priority', 'time_management', 'productivity'
+  type: text("type").notNull(), // 'priority', 'trend', 'action'
   title: text("title").notNull(),
-  description: text("description").notNull(),
-  icon: text("icon").notNull(),
-  color: text("color").notNull(),
+  content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
