@@ -185,10 +185,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phoneNumber } = req.body;
       telegramService.setPhoneNumber(phoneNumber);
-      await telegramService.connect();
+      const result = await telegramService.connect();
+      res.json({ 
+        success: true, 
+        connected: telegramService.isClientConnected(),
+        needsCode: result?.needsCode || false
+      });
+    } catch (error) {
+      console.log("Telegram connect error:", error);
+      res.status(500).json({ message: "Failed to connect to Telegram" });
+    }
+  });
+
+  app.post("/api/telegram/verify", async (req, res) => {
+    try {
+      const { code } = req.body;
+      await telegramService.verifyCode(code);
       res.json({ success: true, connected: telegramService.isClientConnected() });
     } catch (error) {
-      res.status(500).json({ message: "Failed to connect to Telegram" });
+      console.log("Telegram verify error:", error);
+      res.status(500).json({ message: "Failed to verify code" });
     }
   });
 

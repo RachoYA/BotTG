@@ -8,7 +8,6 @@ import LocalAISetup from "@/components/local-ai-setup";
 export default function SettingsPage() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <Navigation />
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center">
           <Settings className="w-8 h-8 mr-3" />

@@ -13,6 +13,8 @@ export default function TelegramSetup() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ['/api/telegram/status'],
@@ -23,18 +25,49 @@ export default function TelegramSetup() {
     mutationFn: async (phoneNumber: string) => {
       return await apiRequest('POST', '/api/telegram/connect', { phoneNumber });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
-      toast({
-        title: "Подключение к Telegram",
-        description: "Начата авторизация в Telegram",
-      });
+      if (data?.needsCode) {
+        setNeedsCode(true);
+        toast({
+          title: "Код подтверждения",
+          description: "Введите код, который пришел в Telegram",
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+        toast({
+          title: "Подключение к Telegram",
+          description: "Начата авторизация в Telegram",
+        });
+      }
     },
     onError: () => {
       toast({
         title: "Ошибка подключения",
         description: "Не удалось подключиться к Telegram",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      return await apiRequest('POST', '/api/telegram/verify', { code });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      setNeedsCode(false);
+      setVerificationCode("");
+      toast({
+        title: "Успешно подключено",
+        description: "Telegram подключен успешно",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Неверный код",
+        description: "Проверьте код и попробуйте снова",
         variant: "destructive",
       });
     },
@@ -50,6 +83,18 @@ export default function TelegramSetup() {
       return;
     }
     connectMutation.mutate(phoneNumber);
+  };
+
+  const handleVerifyCode = () => {
+    if (!verificationCode.trim()) {
+      toast({
+        title: "Введите код",
+        description: "Код подтверждения обязателен",
+        variant: "destructive",
+      });
+      return;
+    }
+    verifyCodeMutation.mutate(verificationCode);
   };
 
   const isConnected = status?.connected || false;
@@ -83,28 +128,76 @@ export default function TelegramSetup() {
 
         {!isConnected && (
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="phone">Номер телефона</Label>
-              <div className="flex items-center mt-1">
-                <Phone className="w-4 h-4 text-gray-500 mr-2" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+7 (999) 123-45-67"
-                  className="flex-1"
-                />
-              </div>
-            </div>
+            {!needsCode ? (
+              <>
+                <div>
+                  <Label htmlFor="phone">Номер телефона</Label>
+                  <div className="flex items-center mt-1">
+                    <Phone className="w-4 h-4 text-gray-500 mr-2" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="+7 (999) 123-45-67"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
 
-            <Button 
-              onClick={handleConnect}
-              disabled={connectMutation.isPending || !phoneNumber.trim()}
-              className="w-full"
-            >
-              {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
-            </Button>
+                <Button 
+                  onClick={handleConnect}
+                  disabled={connectMutation.isPending || !phoneNumber.trim()}
+                  className="w-full"
+                >
+                  {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-blue-800 font-medium">Код отправлен в Telegram</p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Введите код подтверждения, который пришел в Telegram на номер {phoneNumber}
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="code">Код подтверждения</Label>
+                  <div className="flex items-center mt-1">
+                    <Key className="w-4 h-4 text-gray-500 mr-2" />
+                    <Input
+                      id="code"
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="12345"
+                      className="flex-1"
+                      maxLength={5}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={handleVerifyCode}
+                    disabled={verifyCodeMutation.isPending || !verificationCode.trim()}
+                    className="flex-1"
+                  >
+                    {verifyCodeMutation.isPending ? "Проверка..." : "Подтвердить код"}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setNeedsCode(false);
+                      setVerificationCode("");
+                    }}
+                  >
+                    Назад
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

@@ -10,6 +10,8 @@ export class TelegramService {
   private session: StringSession;
   private isConnected: boolean = false;
   private phoneNumber: string = "";
+  private authFlow: any = null;
+  private currentCode: string = "";
 
   constructor() {
     this.apiId = parseInt(process.env.TELEGRAM_API_ID || "24788533");
