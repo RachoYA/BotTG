@@ -226,7 +226,7 @@ export class TelegramService {
 
     try {
       const dialogs = await this.client.getDialogs({
-        limit: 100,
+        limit: 500,
       });
 
       for (const dialog of dialogs) {

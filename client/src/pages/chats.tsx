@@ -31,7 +31,7 @@ export default function ChatsPage() {
 
   const toggleMonitoringMutation = useMutation({
     mutationFn: async ({ chatId, monitored }: { chatId: string; monitored: boolean }) => {
-      return await apiRequest(`/api/telegram/toggle-monitoring`, "POST", { chatId, monitored });
+      return await apiRequest("POST", `/api/telegram/toggle-monitoring`, { chatId, monitored });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
@@ -45,12 +45,25 @@ export default function ChatsPage() {
 
   const loadMessagesMutation = useMutation({
     mutationFn: async (chatId: string) => {
-      return await apiRequest(`/api/telegram/load-messages`, "POST", { chatId });
+      return await apiRequest("POST", `/api/telegram/load-messages`, { chatId });
     },
     onSuccess: () => {
       toast({
         title: "Сообщения загружены",
         description: "Последние сообщения из чата загружены в систему",
+      });
+    },
+  });
+
+  const reloadDialogsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/telegram/reload-dialogs`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      toast({
+        title: "Диалоги обновлены",
+        description: "Список чатов перезагружен с Telegram",
       });
     },
   });
@@ -77,11 +90,22 @@ export default function ChatsPage() {
               <h2 className="text-2xl font-bold text-gray-800">Управление чатами</h2>
               <p className="text-gray-600">Настройка мониторинга Telegram чатов</p>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-success rounded-full"></div>
-              <span className="text-sm font-medium text-success">
-                {telegramStatus?.connected ? 'Подключено' : 'Отключено'}
-              </span>
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={() => reloadDialogsMutation.mutate()}
+                disabled={reloadDialogsMutation.isPending || !telegramStatus?.connected}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${reloadDialogsMutation.isPending ? 'animate-spin' : ''}`} />
+                Обновить чаты
+              </Button>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-success rounded-full"></div>
+                <span className="text-sm font-medium text-success">
+                  {telegramStatus?.connected ? 'Подключено' : 'Отключено'}
+                </span>
+              </div>
             </div>
           </div>
         </header>

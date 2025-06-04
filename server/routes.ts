@@ -192,6 +192,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle chat monitoring
+  app.post("/api/telegram/toggle-monitoring", async (req, res) => {
+    try {
+      const { chatId, monitored } = req.body;
+      const success = await telegramService.toggleChatMonitoring(chatId, monitored);
+      if (success) {
+        res.json({ success: true, message: "Мониторинг обновлен" });
+      } else {
+        res.status(404).json({ message: "Чат не найден" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка обновления мониторинга" });
+    }
+  });
+
+  // Load messages from specific chat
+  app.post("/api/telegram/load-messages", async (req, res) => {
+    try {
+      const { chatId } = req.body;
+      await telegramService.loadMessages(chatId, 50);
+      res.json({ success: true, message: "Сообщения загружены" });
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка загрузки сообщений" });
+    }
+  });
+
+  // Reload dialogs
+  app.post("/api/telegram/reload-dialogs", async (req, res) => {
+    try {
+      await telegramService.loadDialogs();
+      res.json({ success: true, message: "Диалоги обновлены" });
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка обновления диалогов" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Telegram connection endpoints
