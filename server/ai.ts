@@ -283,6 +283,203 @@ export class AIService {
       return `Chat ${chatId}`;
     }
   }
+
+  async processPeriodMessages(startDate: string, endDate: string): Promise<{
+    processedMessages: number;
+    createdTasks: number;
+    createdSummaries: number;
+  }> {
+    try {
+      console.log(`Обработка сообщений за период: ${startDate} - ${endDate}`);
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // Включаем весь последний день
+
+      // Получаем все чаты
+      const chats = await storage.getTelegramChats();
+      let totalProcessedMessages = 0;
+      let createdTasks = 0;
+      let createdSummaries = 0;
+
+      for (const chat of chats) {
+        // Загружаем сообщения из Telegram для этого чата за период
+        await this.loadChatMessagesForPeriod(chat.chatId, start, end);
+        
+        // Получаем сообщения из базы данных за период
+        const messages = await this.getMessagesForPeriod(chat.chatId, start, end);
+        
+        if (messages.length === 0) {
+          continue;
+        }
+
+        totalProcessedMessages += messages.length;
+
+        // Определяем тип чата: личный vs групповой/канал
+        const isPersonalChat = this.isPersonalChat(chat);
+
+        if (isPersonalChat) {
+          // Для личных чатов создаем задачи
+          const extractedTasks = await this.extractTasksFromChatMessages(messages);
+          createdTasks += extractedTasks;
+          console.log(`Создано ${extractedTasks} задач из личного чата: ${chat.title}`);
+        } else {
+          // Для групповых чатов создаем общий AI-саммари
+          const summary = await this.createGroupChatSummary(chat, messages, startDate, endDate);
+          if (summary) {
+            createdSummaries++;
+            console.log(`Создан саммари для группового чата: ${chat.title}`);
+          }
+        }
+      }
+
+      console.log(`Обработка завершена: ${totalProcessedMessages} сообщений, ${createdTasks} задач, ${createdSummaries} саммари`);
+
+      return {
+        processedMessages: totalProcessedMessages,
+        createdTasks,
+        createdSummaries
+      };
+
+    } catch (error) {
+      console.error('Ошибка обработки сообщений за период:', error);
+      throw error;
+    }
+  }
+
+  private isPersonalChat(chat: any): boolean {
+    // Определяем личный чат по различным признакам
+    return !chat.title.includes('группа') && 
+           !chat.title.includes('канал') && 
+           !chat.title.includes('Группа') && 
+           !chat.title.includes('Канал') &&
+           !chat.chatId.startsWith('-'); // Групповые чаты часто имеют отрицательный ID
+  }
+
+  private async loadChatMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<void> {
+    try {
+      // Используем Telegram API для загрузки сообщений за указанный период
+      const { telegramService } = await import("./telegram");
+      
+      // Загружаем больше сообщений для охвата всего периода
+      await telegramService.loadMessages(chatId, 200);
+      
+    } catch (error) {
+      console.error(`Ошибка загрузки сообщений для чата ${chatId}:`, error);
+    }
+  }
+
+  private async getMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<any[]> {
+    try {
+      const allMessages = await storage.getTelegramMessages(chatId, 1000);
+      
+      return allMessages.filter(message => {
+        const messageDate = new Date(message.timestamp);
+        return messageDate >= start && messageDate <= end;
+      });
+      
+    } catch (error) {
+      console.error(`Ошибка получения сообщений для чата ${chatId}:`, error);
+      return [];
+    }
+  }
+
+  private async extractTasksFromChatMessages(messages: any[]): Promise<number> {
+    try {
+      if (messages.length === 0) return 0;
+
+      const messagesText = messages.map(m => 
+        `${new Date(m.timestamp).toLocaleString()}: ${m.senderName}: ${m.text}`
+      ).join('\n');
+
+      const systemPrompt = `Ты - помощник по извлечению задач из личных сообщений. 
+      Анализируй сообщения и извлекай только конкретные задачи, поручения и дедлайны.
+      Отвечай на русском языке в формате JSON.`;
+
+      const prompt = `Проанализируй следующие сообщения из личного чата и извлеки все задачи, поручения и дедлайны:
+
+${messagesText}
+
+Верни результат в JSON формате:
+{
+  "tasks": [
+    {
+      "title": "краткое название задачи",
+      "description": "подробное описание",
+      "priority": "high/medium/low",
+      "deadline": "дата дедлайна или null"
+    }
+  ]
+}`;
+
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      
+      let createdCount = 0;
+      if (parsed.tasks && Array.isArray(parsed.tasks)) {
+        for (const task of parsed.tasks) {
+          const insertTask: InsertExtractedTask = {
+            title: task.title,
+            description: task.description,
+            urgency: task.priority || 'medium',
+            deadline: task.deadline || null,
+            status: 'pending',
+            chatId: messages[0]?.chatId || ''
+          };
+          
+          await storage.createExtractedTask(insertTask);
+          createdCount++;
+        }
+      }
+      
+      return createdCount;
+    } catch (error) {
+      console.error("Ошибка при извлечении задач из чата:", error);
+      return 0;
+    }
+  }
+
+  private async createGroupChatSummary(chat: any, messages: any[], startDate: string, endDate: string): Promise<boolean> {
+    try {
+      const messagesText = messages.map(m => 
+        `${new Date(m.timestamp).toLocaleString()}: ${m.senderName}: ${m.text}`
+      ).join('\n');
+      
+      const systemPrompt = `Ты - помощник по анализу групповых чатов. 
+      Создай краткий саммари обсуждений в групповом чате за указанный период.
+      Выдели ключевые темы, важные решения и моменты, требующие внимания руководства.
+      Отвечай на русском языке в формате JSON.`;
+
+      const prompt = `Проанализируй следующие сообщения из группового чата "${chat.title}" за период ${startDate} - ${endDate} и создай саммари:
+
+${messagesText}
+
+Верни результат в JSON формате:
+{
+  "summary": "краткое описание основных обсуждений",
+  "keyTopics": ["тема1", "тема2", "тема3"],
+  "requiresResponse": ["что требует внимания руководства"]
+}`;
+
+      const response = await callOpenAI(prompt, systemPrompt);
+      const result = JSON.parse(response);
+
+      // Создаем специальную запись для группового саммари
+      const insertSummary: InsertDailySummary = {
+        date: startDate,
+        summary: `[${chat.title}] ${result.summary}`,
+        keyTopics: result.keyTopics || [],
+        requiresResponse: result.requiresResponse || []
+      };
+
+      await storage.createDailySummary(insertSummary);
+      return true;
+
+    } catch (error) {
+      console.error(`Ошибка создания саммари для чата ${chat.title}:`, error);
+      return false;
+    }
+  }
 }
 
 export const aiService = new AIService();

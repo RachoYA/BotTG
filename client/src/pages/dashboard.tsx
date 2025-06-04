@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Navigation from "@/components/navigation";
 import Sidebar from "@/components/sidebar";
 import DailySummary from "@/components/daily-summary";
@@ -6,12 +6,54 @@ import TasksOverview from "@/components/tasks-overview";
 import ChatMonitoring from "@/components/chat-monitoring";
 import AIInsights from "@/components/ai-insights";
 import QuickActions from "@/components/quick-actions";
-import { Bell } from "lucide-react";
+import { Bell, Calendar, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Dashboard() {
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7); // По умолчанию неделя назад
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const { toast } = useToast();
+
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/dashboard/stats'],
+  });
+
+  const processPeriodMutation = useMutation({
+    mutationFn: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
+      return await apiRequest('/api/ai/process-period', {
+        method: 'POST',
+        body: JSON.stringify({ startDate, endDate }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Обработка завершена",
+        description: `Обработано сообщений: ${data.processedMessages}, создано задач: ${data.createdTasks}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка обработки",
+        description: "Не удалось обработать сообщения за указанный период",
+        variant: "destructive",
+      });
+    },
   });
 
   const currentDate = new Date().toLocaleDateString('ru-RU', {
@@ -19,6 +61,28 @@ export default function Dashboard() {
     month: 'long',
     day: 'numeric',
   });
+
+  const handleProcessPeriod = () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите начальную и конечную дату",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+      toast({
+        title: "Ошибка",
+        description: "Начальная дата должна быть раньше конечной",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    processPeriodMutation.mutate({ startDate, endDate });
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -47,6 +111,61 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Period Processing Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Обработка сообщений за период
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="start-date">Начальная дата</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end-date">Конечная дата</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={handleProcessPeriod}
+                    disabled={processPeriodMutation.isPending}
+                    className="w-full"
+                  >
+                    {processPeriodMutation.isPending ? (
+                      <>
+                        <Download className="mr-2 h-4 w-4 animate-spin" />
+                        Обработка...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Обработать период
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mt-3">
+                Загружает все сообщения за выбранный период и создает задачи для личных чатов, 
+                общие AI-саммари для групповых чатов.
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">

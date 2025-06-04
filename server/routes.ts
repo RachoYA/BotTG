@@ -370,6 +370,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Process messages for a specific period
+  app.post("/api/ai/process-period", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.body;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Start date and end date are required" });
+      }
+
+      const { aiService } = await import("./ai");
+      const result = await aiService.processPeriodMessages(startDate, endDate);
+      
+      res.json({ 
+        success: true, 
+        ...result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("Period processing error:", error);
+      res.status(500).json({ 
+        error: "Failed to process period messages", 
+        details: error.message || "Unknown error"
+      });
+    }
+  });
+
   // Database Statistics
   app.get("/api/database/stats", async (req, res) => {
     try {
