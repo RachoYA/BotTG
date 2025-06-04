@@ -196,7 +196,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       res.json({ 
         connected: telegramService.isClientConnected(),
-        sessionString: telegramService.getSessionString()
+        sessionString: telegramService.getSessionString(),
+        apiId: "24788533",
+        apiHash: "3a5e530327b9e7e8e90b54c6ab0259a1"
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get Telegram status" });

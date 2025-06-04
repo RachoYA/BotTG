@@ -1,13 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Settings } from "lucide-react";
+import { FileText, Download, Settings, MessageCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import TelegramSetup from "./telegram-setup";
+import LocalAISetup from "./local-ai-setup";
 
 export default function QuickActions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showSettings, setShowSettings] = useState(false);
 
   const generateSummaryMutation = useMutation({
     mutationFn: async () => {
@@ -31,20 +35,27 @@ export default function QuickActions() {
   });
 
   const exportTasks = () => {
-    // This would export tasks to CSV or JSON
     toast({
       title: "Экспорт задач",
       description: "Функция экспорта будет доступна в следующей версии",
     });
   };
 
-  const openSettings = () => {
-    // This would open settings modal
-    toast({
-      title: "Настройки",
-      description: "Панель настроек будет доступна в следующей версии",
-    });
-  };
+  if (showSettings) {
+    return (
+      <div className="space-y-4">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowSettings(false)}
+          className="w-full"
+        >
+          ← Назад к действиям
+        </Button>
+        <TelegramSetup />
+        <LocalAISetup />
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -67,9 +78,9 @@ export default function QuickActions() {
           Экспорт задач
         </Button>
         
-        <Button variant="outline" className="w-full" onClick={openSettings}>
+        <Button variant="outline" className="w-full" onClick={() => setShowSettings(true)}>
           <Settings className="w-4 h-4 mr-2" />
-          Настройки уведомлений
+          Настройки подключений
         </Button>
       </CardContent>
     </Card>
