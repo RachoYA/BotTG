@@ -4,12 +4,15 @@ import Sidebar from "@/components/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Users, ToggleLeft, ToggleRight, Download } from "lucide-react";
+import { MessageSquare, Users, ToggleLeft, ToggleRight, Download, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function ChatsPage() {
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
   
   const { data: chats, isLoading } = useQuery({
     queryKey: ['/api/chats'],
@@ -26,6 +29,7 @@ export default function ChatsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({
         title: "Настройки обновлены",
         description: "Мониторинг чата изменен",
