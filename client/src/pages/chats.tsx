@@ -278,7 +278,7 @@ export default function ChatsPage() {
                             <span>{message.senderName || 'Неизвестный отправитель'}</span>
                             <span>{new Date(message.timestamp).toLocaleString('ru-RU')}</span>
                           </div>
-                          <p className="text-gray-900">{message.content}</p>
+                          <p className="text-gray-900">{message.text || message.content}</p>
                           {message.isProcessed && (
                             <Badge variant="secondary" className="mt-2">
                               Обработано
