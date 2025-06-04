@@ -33,16 +33,22 @@ export default function Dashboard() {
 
   const processPeriodMutation = useMutation({
     mutationFn: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
-      return await apiRequest('/api/ai/process-period', {
+      const response = await fetch('/api/ai/process-period', {
         method: 'POST',
         body: JSON.stringify({ startDate, endDate }),
         headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to process period messages');
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Обработка завершена",
-        description: `Обработано сообщений: ${data.processedMessages}, создано задач: ${data.createdTasks}`,
+        description: `Обработано сообщений: ${data.processedMessages}, создано задач: ${data.createdTasks}, создано саммари: ${data.createdSummaries}`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
