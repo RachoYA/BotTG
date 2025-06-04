@@ -26,7 +26,8 @@ export default function TelegramSetup() {
 
   const connectMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      return await apiRequest('POST', '/api/telegram/connect', { phoneNumber });
+      const response = await apiRequest('POST', '/api/telegram/connect', { phoneNumber });
+      return await response.json();
     },
     onSuccess: (data: any) => {
       console.log("Connect success response:", data);
@@ -65,7 +66,8 @@ export default function TelegramSetup() {
 
   const verifyCodeMutation = useMutation({
     mutationFn: async ({ code, password }: { code: string; password?: string }) => {
-      return await apiRequest('POST', '/api/telegram/verify', { code, password });
+      const response = await apiRequest('POST', '/api/telegram/verify', { code, password });
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
