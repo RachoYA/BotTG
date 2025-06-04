@@ -138,7 +138,8 @@ export class TelegramService {
       for (const message of messages) {
         if (!message.text) continue;
 
-        const senderName = message.sender?.firstName || message.sender?.username || "Unknown";
+        const sender = message.sender as any;
+        const senderName = sender?.firstName || sender?.username || "Unknown";
         const insertMessage: InsertTelegramMessage = {
           messageId: message.id?.toString() || "",
           chatId,
