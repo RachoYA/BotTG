@@ -67,7 +67,7 @@ export class AIService {
 
   private async extractTasksFromMessages(messages: any[]): Promise<void> {
     try {
-      const messagesText = messages.map(m => `[${m.date}] ${m.senderUsername || 'Unknown'}: ${m.message}`).join('\n');
+      const messagesText = messages.map(m => `[${m.timestamp}] ${m.senderName || 'Unknown'}: ${m.text}`).join('\n');
       
       const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки. Анализируй сообщения и извлекай задачи, поручения, дедлайны и важную информацию.
 
@@ -98,11 +98,9 @@ export class AIService {
           const insertTask: InsertExtractedTask = {
             title: task.title,
             description: task.description,
-            priority: task.priority || 'средний',
-            deadline: task.deadline ? new Date(task.deadline) : null,
-            status: 'новая',
-            assignee: task.assignee,
-            source: task.source,
+            urgency: task.priority || 'medium',
+            deadline: task.deadline || null,
+            status: 'pending',
             chatId: messages[0]?.chatId || ''
           };
           
@@ -122,7 +120,7 @@ export class AIService {
       // Получаем все сообщения за день
       const messages = await storage.getTelegramMessages();
       const dayMessages = messages.filter(m => {
-        const messageDate = new Date(m.date).toISOString().split('T')[0];
+        const messageDate = new Date(m.timestamp).toISOString().split('T')[0];
         return messageDate === date;
       });
 
@@ -134,7 +132,7 @@ export class AIService {
       // Получаем задачи за день
       const tasks = await storage.getExtractedTasks();
       const dayTasks = tasks.filter(t => {
-        const taskDate = new Date(t.createdAt).toISOString().split('T')[0];
+        const taskDate = new Date(t.extractedAt || new Date()).toISOString().split('T')[0];
         return taskDate === date;
       });
 
@@ -153,8 +151,8 @@ export class AIService {
   "upcomingDeadlines": ["дедлайн 1", "дедлайн 2", ...]
 }`;
 
-      const messagesText = dayMessages.map(m => `[${m.date}] ${m.senderUsername}: ${m.message}`).join('\n');
-      const tasksText = dayTasks.map(t => `Задача: ${t.title} (${t.priority})`).join('\n');
+      const messagesText = dayMessages.map(m => `[${m.timestamp}] ${m.senderName}: ${m.text}`).join('\n');
+      const tasksText = dayTasks.map(t => `Задача: ${t.title} (${t.urgency})`).join('\n');
       
       const prompt = `Создай ежедневную сводку на основе:\n\nСООБЩЕНИЯ:\n${messagesText}\n\nЗАДАЧИ:\n${tasksText}`;
       
@@ -162,13 +160,10 @@ export class AIService {
       const parsed = JSON.parse(response);
 
       const insertSummary: InsertDailySummary = {
-        date: new Date(date),
+        date: date,
         summary: parsed.summary,
-        keyPoints: parsed.keyPoints || [],
-        actionRequired: parsed.actionRequired || [],
-        upcomingDeadlines: parsed.upcomingDeadlines || [],
-        messageCount: dayMessages.length,
-        taskCount: dayTasks.length
+        requiresResponse: parsed.actionRequired || [],
+        keyTopics: parsed.keyPoints || []
       };
 
       await storage.createDailySummary(insertSummary);
@@ -206,7 +201,7 @@ export class AIService {
 }`;
 
       const tasksText = recentTasks.map(t => 
-        `Задача: ${t.title}, Приоритет: ${t.priority}, Статус: ${t.status}, Создана: ${t.createdAt}`
+        `Задача: ${t.title}, Приоритет: ${t.urgency}, Статус: ${t.status}, Создана: ${t.extractedAt}`
       ).join('\n');
       
       const prompt = `Проанализируй следующие задачи и дай инсайты:\n\n${tasksText}`;
@@ -219,9 +214,7 @@ export class AIService {
           const insertInsight: InsertAiInsight = {
             type: insight.type,
             title: insight.title,
-            description: insight.description,
-            actionItems: insight.actionItems || [],
-            priority: insight.type === 'warning' ? 'высокий' : 'средний'
+            content: insight.description
           };
           
           await storage.createAiInsight(insertInsight);

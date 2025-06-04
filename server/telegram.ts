@@ -30,8 +30,8 @@ export class TelegramService {
       try {
         const sessionPath = path.join(process.cwd(), '.telegram_session');
         if (fs.existsSync(sessionPath)) {
-          sessionString = fs.readFileSync(sessionPath, 'utf8');
-          console.log("Loaded session string from file");
+          sessionString = fs.readFileSync(sessionPath, 'utf8').trim();
+          console.log("Loaded session string from file:", sessionString.substring(0, 20) + "...");
         }
       } catch (e) {
         console.log("No session file found");
