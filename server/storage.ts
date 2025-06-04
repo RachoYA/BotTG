@@ -519,19 +519,23 @@ export class DatabaseStorage implements IStorage {
 
   // Telegram Messages
   async getTelegramMessages(chatId?: string, limit?: number): Promise<TelegramMessage[]> {
-    let query = db.select().from(telegramMessages);
-    
-    if (chatId) {
-      query = query.where(eq(telegramMessages.chatId, chatId));
+    if (chatId && limit) {
+      return await db.select().from(telegramMessages)
+        .where(eq(telegramMessages.chatId, chatId))
+        .orderBy(desc(telegramMessages.timestamp))
+        .limit(limit);
+    } else if (chatId) {
+      return await db.select().from(telegramMessages)
+        .where(eq(telegramMessages.chatId, chatId))
+        .orderBy(desc(telegramMessages.timestamp));
+    } else if (limit) {
+      return await db.select().from(telegramMessages)
+        .orderBy(desc(telegramMessages.timestamp))
+        .limit(limit);
+    } else {
+      return await db.select().from(telegramMessages)
+        .orderBy(desc(telegramMessages.timestamp));
     }
-    
-    query = query.orderBy(desc(telegramMessages.timestamp));
-    
-    if (limit) {
-      query = query.limit(limit);
-    }
-    
-    return await query;
   }
 
   async getUnprocessedMessages(): Promise<TelegramMessage[]> {

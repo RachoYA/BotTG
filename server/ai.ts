@@ -120,11 +120,11 @@ export class AIService {
         const insertTask: InsertExtractedTask = {
           title: taskData.title,
           description: taskData.description || '',
-          priority: taskData.priority,
-          status: 'new',
-          deadline: taskData.deadline ? new Date(taskData.deadline) : null,
-          sourceMessageId: sourceMessage?.messageId || null,
-          sourceChatId: messages[0].chatId,
+          urgency: taskData.priority || 'medium',
+          status: 'pending',
+          deadline: taskData.deadline || null,
+          chatId: messages[0].chatId,
+          messageId: sourceMessage?.messageId || null,
         };
 
         await storage.createExtractedTask(insertTask);
