@@ -13,6 +13,7 @@ import { useState } from "react";
 export default function ChatsPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   
   const { data: chats, isLoading } = useQuery({
     queryKey: ['/api/chats'],
@@ -21,6 +22,11 @@ export default function ChatsPage() {
   const { data: telegramStatus } = useQuery({
     queryKey: ['/api/telegram/status'],
     refetchInterval: 5000,
+  });
+
+  const { data: chatMessages, isLoading: isLoadingMessages } = useQuery({
+    queryKey: ['/api/chats', selectedChatId, 'messages'],
+    enabled: !!selectedChatId,
   });
 
   const toggleMonitoringMutation = useMutation({
@@ -119,6 +125,24 @@ export default function ChatsPage() {
               </Card>
             </div>
 
+            {/* Search */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Поиск чатов</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Поиск по названию чата..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Chats List */}
             <Card>
               <CardHeader>
@@ -126,7 +150,12 @@ export default function ChatsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {chats?.map((chat: any) => (
+                  {Array.isArray(chats) && chats
+                    .filter((chat: any) => 
+                      searchTerm === "" || 
+                      chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((chat: any) => (
                     <div key={chat.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -147,6 +176,15 @@ export default function ChatsPage() {
                           {chat.isMonitored ? "Мониторинг включен" : "Мониторинг отключен"}
                         </Badge>
                         
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedChatId(chat.chatId)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Просмотр
+                        </Button>
+
                         <Button
                           variant="outline"
                           size="sm"

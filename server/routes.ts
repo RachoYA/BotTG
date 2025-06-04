@@ -115,6 +115,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get messages for a specific chat
+  app.get("/api/chats/:chatId/messages", async (req, res) => {
+    try {
+      const { chatId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      const messages = await storage.getTelegramMessages(chatId, limit);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      res.status(500).json({ error: "Failed to fetch chat messages" });
+    }
+  });
+
   // Toggle chat monitoring
   app.patch("/api/chats/:chatId/monitoring", async (req, res) => {
     try {
