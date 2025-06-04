@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 export default function Sidebar() {
   const { data: stats } = useQuery({
@@ -53,10 +54,10 @@ export default function Sidebar() {
             </a>
           </li>
           <li>
-            <a href="#" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Link href="/settings" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
               <i className="fas fa-cog mr-3"></i>
               Настройки
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>

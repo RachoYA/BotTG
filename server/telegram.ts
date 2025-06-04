@@ -61,25 +61,49 @@ export class TelegramService {
 
   async verifyCode(code: string): Promise<void> {
     try {
-      console.log("Starting verification with code:", code);
+      console.log("Verifying code:", code);
       
-      // Use the high-level start method but now with the code available
+      if (!this.client.connected) {
+        await this.client.connect();
+      }
+
+      // Use the client.start method with proper authentication flow
       await this.client.start({
-        phoneNumber: async () => this.phoneNumber,
-        password: async () => process.env.TELEGRAM_PASSWORD || "",
-        phoneCode: async () => code,
-        onError: (err) => console.log("Auth error:", err),
+        phoneNumber: async () => {
+          console.log("Phone number requested:", this.phoneNumber);
+          return this.phoneNumber;
+        },
+        password: async () => {
+          console.log("Password requested");
+          return process.env.TELEGRAM_PASSWORD || "";
+        },
+        phoneCode: async () => {
+          console.log("Code requested, providing:", code);
+          return code;
+        },
+        onError: (err) => {
+          console.log("Telegram auth error:", err);
+        },
       });
 
-      this.isConnected = true;
-      this.authState = 'connected';
-      console.log("Successfully authenticated with Telegram");
-      
-      // Load dialogs after successful authentication
-      await this.loadDialogs();
+      // Check if we're now authorized
+      if (await this.client.checkAuthorization()) {
+        this.isConnected = true;
+        this.authState = 'connected';
+        console.log("Successfully authenticated with Telegram");
+        
+        // Save the session string for future use
+        const sessionString = this.client.session.save();
+        console.log("New session string saved:", sessionString);
+        
+        // Load dialogs after successful authentication
+        await this.loadDialogs();
+      } else {
+        throw new Error("Authentication failed");
+      }
     } catch (error: any) {
       console.error("Failed to verify code:", error);
-      this.authState = 'code_needed'; // Reset to allow retry
+      this.authState = 'code_needed';
       throw error;
     }
   }
