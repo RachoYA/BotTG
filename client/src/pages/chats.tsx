@@ -22,11 +22,7 @@ export default function ChatsPage() {
 
   const toggleMonitoringMutation = useMutation({
     mutationFn: async ({ chatId, monitored }: { chatId: string; monitored: boolean }) => {
-      return await apiRequest(`/api/telegram/toggle-monitoring`, {
-        method: "POST",
-        body: JSON.stringify({ chatId, monitored }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest(`/api/telegram/toggle-monitoring`, "POST", { chatId, monitored });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
@@ -39,11 +35,7 @@ export default function ChatsPage() {
 
   const loadMessagesMutation = useMutation({
     mutationFn: async (chatId: string) => {
-      return await apiRequest(`/api/telegram/load-messages`, {
-        method: "POST",
-        body: JSON.stringify({ chatId }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest(`/api/telegram/load-messages`, "POST", { chatId });
     },
     onSuccess: () => {
       toast({
