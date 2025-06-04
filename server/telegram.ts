@@ -256,16 +256,27 @@ export class TelegramService {
     }
   }
 
-  async loadMessages(chatId: string, limit: number = 50): Promise<void> {
+  async loadMessages(chatId: string, limit: number = 20): Promise<void> {
     if (!this.isConnected) return;
 
     try {
+      // Получаем только последние сообщения из конкретного чата
       const messages = await this.client.getMessages(chatId, {
         limit,
       });
 
+      let newMessagesCount = 0;
+
       for (const message of messages) {
         if (!message.text) continue;
+
+        // Проверяем, нет ли уже этого сообщения в базе
+        const existingMessages = await storage.getTelegramMessages(chatId, 1);
+        const lastMessageId = existingMessages[0]?.messageId;
+        
+        if (lastMessageId && message.id?.toString() === lastMessageId) {
+          break; // Прекращаем, если дошли до уже загруженных сообщений
+        }
 
         const sender = message.sender as any;
         const senderName = sender?.firstName || sender?.username || "Unknown";
@@ -280,11 +291,71 @@ export class TelegramService {
         };
 
         await storage.createTelegramMessage(insertMessage);
+        newMessagesCount++;
       }
 
-      console.log(`Loaded ${messages.length} messages from chat ${chatId}`);
+      if (newMessagesCount > 0) {
+        console.log(`Loaded ${newMessagesCount} new messages from chat ${chatId}`);
+      }
     } catch (error) {
       console.error(`Failed to load messages from chat ${chatId}:`, error);
+    }
+  }
+
+  // Новый метод для мониторинга сообщений в реальном времени
+  async startRealtimeMonitoring(): Promise<void> {
+    if (!this.isConnected) return;
+
+    try {
+      // Добавляем обработчик новых сообщений
+      this.client.addEventHandler(async (event: any) => {
+        if (event.className === 'UpdateNewMessage') {
+          const message = event.message;
+          if (!message || !message.text) return;
+
+          const chatId = message.chatId?.toString();
+          if (!chatId) return;
+
+          // Проверяем, мониторится ли этот чат
+          const chat = await storage.getTelegramChatByChatId(chatId);
+          if (!chat || !chat.isMonitored) return;
+
+          const sender = message.sender as any;
+          const senderName = sender?.firstName || sender?.username || "Unknown";
+          
+          const insertMessage: InsertTelegramMessage = {
+            messageId: message.id?.toString() || "",
+            chatId,
+            senderId: message.senderId?.toString() || null,
+            senderName,
+            text: message.text,
+            timestamp: new Date(message.date * 1000),
+            isProcessed: false,
+          };
+
+          await storage.createTelegramMessage(insertMessage);
+          console.log(`New real-time message received in chat ${chatId}: ${message.text.substring(0, 50)}...`);
+        }
+      });
+
+      console.log("Real-time message monitoring started");
+    } catch (error) {
+      console.error("Failed to start real-time monitoring:", error);
+    }
+  }
+
+  // Метод для периодической проверки новых сообщений в мониторимых чатах
+  async checkForNewMessages(): Promise<void> {
+    if (!this.isConnected) return;
+
+    try {
+      const monitoredChats = await storage.getMonitoredChats();
+      
+      for (const chat of monitoredChats) {
+        await this.loadMessages(chat.chatId, 10); // Загружаем только 10 последних сообщений
+      }
+    } catch (error) {
+      console.error("Failed to check for new messages:", error);
     }
   }
 
