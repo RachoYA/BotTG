@@ -26,18 +26,25 @@ export class TelegramService {
     let sessionString = process.env.TELEGRAM_SESSION_STRING || "";
     
     // Если в переменной окружения нет сессии, пытаемся загрузить из файла
-    if (!sessionString) {
+    if (!sessionString || sessionString.length < 100) {
       try {
         const sessionPath = path.join(process.cwd(), '.telegram_session');
         if (fs.existsSync(sessionPath)) {
-          sessionString = fs.readFileSync(sessionPath, 'utf8').trim();
-          console.log("Loaded session from file");
+          const fileSession = fs.readFileSync(sessionPath, 'utf8').trim();
+          if (fileSession && fileSession.length > 100) {
+            sessionString = fileSession;
+            console.log("Loaded valid session from file, length:", sessionString.length);
+          }
         }
       } catch (e) {
-        console.log("No session file found, will need manual auth");
+        console.log("Error loading session file:", e.message);
       }
+    }
+    
+    if (sessionString && sessionString.length > 100) {
+      console.log("Using valid session string");
     } else {
-      console.log("Using session from environment variable");
+      console.log("No valid session found, manual authentication required");
     }
     
     try {
