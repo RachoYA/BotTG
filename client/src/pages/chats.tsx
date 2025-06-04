@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MessageSquare, Users, ToggleLeft, ToggleRight, Download, Search, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -206,14 +207,49 @@ export default function ChatsPage() {
                           {chat.isMonitored ? "Мониторинг включен" : "Мониторинг отключен"}
                         </Badge>
                         
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedChatId(chat.chatId)}
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Просмотр
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedChatId(chat.chatId)}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Просмотр
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>
+                                Сообщения из чата: {chat.title}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              {isLoadingMessages ? (
+                                <p className="text-gray-500">Загрузка сообщений...</p>
+                              ) : Array.isArray(chatMessages) && chatMessages.length > 0 ? (
+                                <div className="space-y-4 max-h-96 overflow-y-auto">
+                                  {chatMessages.map((message: any) => (
+                                    <div key={message.id} className="border-l-4 border-blue-200 pl-4 py-2">
+                                      <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+                                        <span>{message.senderName || 'Неизвестный отправитель'}</span>
+                                        <span>{new Date(message.timestamp).toLocaleString('ru-RU')}</span>
+                                      </div>
+                                      <p className="text-gray-900">{message.text || message.content}</p>
+                                      {message.isProcessed && (
+                                        <Badge variant="secondary" className="mt-2">
+                                          Обработано
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500">Нет сообщений в этом чате</p>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
 
                         <Button
                           variant="outline"
@@ -250,49 +286,7 @@ export default function ChatsPage() {
               </CardContent>
             </Card>
 
-            {/* Messages View */}
-            {selectedChatId && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>
-                      Сообщения из чата: {chats?.find(c => c.chatId === selectedChatId)?.title || selectedChatId}
-                    </CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedChatId(null)}
-                    >
-                      Закрыть
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingMessages ? (
-                    <p className="text-gray-500">Загрузка сообщений...</p>
-                  ) : Array.isArray(chatMessages) && chatMessages.length > 0 ? (
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {chatMessages.map((message: any) => (
-                        <div key={message.id} className="border-l-4 border-blue-200 pl-4 py-2">
-                          <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
-                            <span>{message.senderName || 'Неизвестный отправитель'}</span>
-                            <span>{new Date(message.timestamp).toLocaleString('ru-RU')}</span>
-                          </div>
-                          <p className="text-gray-900">{message.text || message.content}</p>
-                          {message.isProcessed && (
-                            <Badge variant="secondary" className="mt-2">
-                              Обработано
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">Нет сообщений в этом чате</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+
           </div>
         </main>
       </div>
