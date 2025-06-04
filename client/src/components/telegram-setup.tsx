@@ -81,21 +81,45 @@ export default function TelegramSetup() {
         description: "Telegram подключен успешно",
       });
     },
-    onError: (error: any) => {
-      console.error("Verify error:", error);
-      if (error?.needsPassword) {
+    onError: async (error: any) => {
+      console.error("Verify error details:", error);
+      
+      // Пытаемся получить JSON из ответа ошибки
+      try {
+        if (error.message && error.message.includes("400:")) {
+          const responseText = error.message.split("400: ")[1];
+          const errorData = JSON.parse(responseText);
+          
+          if (errorData.needsPassword) {
+            console.log("Password required, showing password field");
+            setNeedsPassword(true);
+            toast({
+              title: "Требуется пароль",
+              description: "Введите пароль двухфакторной аутентификации",
+            });
+            return;
+          }
+        }
+      } catch (parseError) {
+        console.log("Could not parse error response, checking message text");
+      }
+      
+      // Проверяем текст ошибки напрямую
+      if (error.message && error.message.includes("Two-factor authentication password required")) {
+        console.log("Password required by message text, showing password field");
         setNeedsPassword(true);
         toast({
           title: "Требуется пароль",
           description: "Введите пароль двухфакторной аутентификации",
         });
-      } else {
-        toast({
-          title: "Ошибка авторизации",
-          description: error?.message || "Проверьте код и попробуйте снова",
-          variant: "destructive",
-        });
+        return;
       }
+      
+      toast({
+        title: "Ошибка авторизации",
+        description: error?.message || "Проверьте код и попробуйте снова",
+        variant: "destructive",
+      });
     },
   });
 
