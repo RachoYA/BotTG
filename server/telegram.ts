@@ -1,127 +1,132 @@
+import { TelegramClient } from "telegram";
+import { StringSession } from "telegram/sessions";
 import { storage } from "./storage";
 import { InsertTelegramChat, InsertTelegramMessage } from "@shared/schema";
 
-interface TelegramUpdate {
-  message: {
-    message_id: number;
-    chat: {
-      id: string;
-      title?: string;
-      type: string;
-    };
-    from: {
-      id: string;
-      first_name: string;
-      last_name?: string;
-      username?: string;
-    };
-    text?: string;
-    date: number;
-  };
-}
-
 export class TelegramService {
-  private botToken: string;
-  private isPolling: boolean = false;
-  private lastUpdateId: number = 0;
+  private client: TelegramClient;
+  private apiId: number;
+  private apiHash: string;
+  private session: StringSession;
+  private isConnected: boolean = false;
+  private phoneNumber: string = "";
 
   constructor() {
-    this.botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
-    if (!this.botToken) {
-      console.warn("TELEGRAM_BOT_TOKEN not found in environment variables");
-    }
-  }
-
-  async startPolling(): Promise<void> {
-    if (this.isPolling || !this.botToken) return;
+    this.apiId = parseInt(process.env.TELEGRAM_API_ID || "24788533");
+    this.apiHash = process.env.TELEGRAM_API_HASH || "3a5e530327b9e7e8e90b54c6ab0259a1";
+    this.session = new StringSession(process.env.TELEGRAM_SESSION || "");
     
-    this.isPolling = true;
-    console.log("Starting Telegram polling...");
-    
-    while (this.isPolling) {
-      try {
-        await this.pollUpdates();
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every second
-      } catch (error) {
-        console.error("Telegram polling error:", error);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds on error
-      }
-    }
-  }
-
-  stopPolling(): void {
-    this.isPolling = false;
-    console.log("Stopped Telegram polling");
-  }
-
-  private async pollUpdates(): Promise<void> {
-    if (!this.botToken) return;
-
-    const url = `https://api.telegram.org/bot${this.botToken}/getUpdates`;
-    const params = new URLSearchParams({
-      offset: (this.lastUpdateId + 1).toString(),
-      limit: "100",
-      timeout: "10"
+    this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
+      connectionRetries: 5,
     });
+  }
 
-    const response = await fetch(`${url}?${params}`);
-    
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
-    }
+  async connect(): Promise<void> {
+    try {
+      console.log("Connecting to Telegram...");
+      await this.client.start({
+        phoneNumber: async () => this.phoneNumber,
+        password: async () => {
+          // Если нужен пароль двухфакторной аутентификации
+          return process.env.TELEGRAM_PASSWORD || "";
+        },
+        phoneCode: async () => {
+          // В реальном приложении нужно будет запросить код у пользователя
+          return process.env.TELEGRAM_CODE || "";
+        },
+        onError: (err) => console.log("Telegram auth error:", err),
+      });
 
-    const data = await response.json();
-    
-    if (!data.ok) {
-      throw new Error(`Telegram API error: ${data.description}`);
-    }
-
-    for (const update of data.result) {
-      await this.processUpdate(update);
-      this.lastUpdateId = Math.max(this.lastUpdateId, update.update_id);
+      this.isConnected = true;
+      console.log("Successfully connected to Telegram");
+      
+      // Получаем список диалогов при подключении
+      await this.loadDialogs();
+    } catch (error) {
+      console.error("Failed to connect to Telegram:", error);
+      this.isConnected = false;
     }
   }
 
-  private async processUpdate(update: any): Promise<void> {
-    if (!update.message) return;
-
-    const message = update.message;
-    const chatId = message.chat.id.toString();
-
-    // Ensure chat exists in our database
-    let chat = await storage.getTelegramChatByChatId(chatId);
-    if (!chat) {
-      const insertChat: InsertTelegramChat = {
-        chatId,
-        title: message.chat.title || `${message.from.first_name} ${message.from.last_name || ''}`.trim(),
-        type: message.chat.type,
-        isMonitored: false,
-        participantCount: message.chat.type === 'private' ? 2 : 0,
-      };
-      chat = await storage.createTelegramChat(insertChat);
+  async disconnect(): Promise<void> {
+    if (this.client.connected) {
+      await this.client.disconnect();
+      this.isConnected = false;
+      console.log("Disconnected from Telegram");
     }
+  }
 
-    // Only process messages from monitored chats
-    if (!chat.isMonitored) return;
+  async loadDialogs(): Promise<void> {
+    if (!this.isConnected) return;
 
-    // Store the message
-    const senderName = `${message.from.first_name} ${message.from.last_name || ''}`.trim();
-    const insertMessage: InsertTelegramMessage = {
-      messageId: message.message_id.toString(),
-      chatId,
-      senderId: message.from.id.toString(),
-      senderName,
-      text: message.text || '',
-      timestamp: new Date(message.date * 1000),
-      isProcessed: false,
-    };
+    try {
+      const dialogs = await this.client.getDialogs({
+        limit: 100,
+      });
 
-    await storage.createTelegramMessage(insertMessage);
+      for (const dialog of dialogs) {
+        if (!dialog.isChannel && !dialog.isGroup && !dialog.isUser) continue;
+
+        const chatId = dialog.id?.toString();
+        if (!chatId) continue;
+
+        // Проверяем, есть ли уже этот чат в базе
+        let existingChat = await storage.getTelegramChatByChatId(chatId);
+        if (existingChat) continue;
+
+        const insertChat: InsertTelegramChat = {
+          chatId,
+          title: dialog.title || dialog.name || "Без названия",
+          type: dialog.isGroup ? "group" : dialog.isChannel ? "channel" : "private",
+          isMonitored: false,
+          participantCount: 0,
+        };
+
+        await storage.createTelegramChat(insertChat);
+      }
+
+      console.log(`Loaded ${dialogs.length} dialogs from Telegram`);
+    } catch (error) {
+      console.error("Failed to load dialogs:", error);
+    }
+  }
+
+  async loadMessages(chatId: string, limit: number = 50): Promise<void> {
+    if (!this.isConnected) return;
+
+    try {
+      const messages = await this.client.getMessages(chatId, {
+        limit,
+      });
+
+      for (const message of messages) {
+        if (!message.text) continue;
+
+        const senderName = message.sender?.firstName || message.sender?.username || "Unknown";
+        const insertMessage: InsertTelegramMessage = {
+          messageId: message.id?.toString() || "",
+          chatId,
+          senderId: message.senderId?.toString() || null,
+          senderName,
+          text: message.text,
+          timestamp: new Date(message.date * 1000),
+          isProcessed: false,
+        };
+
+        await storage.createTelegramMessage(insertMessage);
+      }
+
+      console.log(`Loaded ${messages.length} messages from chat ${chatId}`);
+    } catch (error) {
+      console.error(`Failed to load messages from chat ${chatId}:`, error);
+    }
+  }
+
+  setPhoneNumber(phoneNumber: string): void {
+    this.phoneNumber = phoneNumber;
   }
 
   async getAvailableChats(): Promise<any[]> {
-    // In a real implementation, this would use Telegram Client API
-    // For now, return the chats we have in storage
     return await storage.getTelegramChats();
   }
 
@@ -130,31 +135,33 @@ export class TelegramService {
     if (!chat) return false;
 
     await storage.updateTelegramChat(chat.id, { isMonitored: monitored });
+    
+    // Если включаем мониторинг, загружаем последние сообщения
+    if (monitored && this.isConnected) {
+      await this.loadMessages(chatId, 50);
+    }
+    
     return true;
   }
 
   async sendMessage(chatId: string, text: string): Promise<boolean> {
-    if (!this.botToken) return false;
+    if (!this.isConnected) return false;
 
     try {
-      const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-        }),
-      });
-
-      const data = await response.json();
-      return data.ok;
+      await this.client.sendMessage(chatId, { message: text });
+      return true;
     } catch (error) {
       console.error("Failed to send Telegram message:", error);
       return false;
     }
+  }
+
+  isClientConnected(): boolean {
+    return this.isConnected;
+  }
+
+  getSessionString(): string {
+    return this.session.save();
   }
 }
 

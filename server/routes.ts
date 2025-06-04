@@ -8,7 +8,6 @@ import { insertTelegramChatSchema, insertExtractedTaskSchema } from "@shared/sch
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start services
-  telegramService.startPolling();
   schedulerService.start();
 
   // Dashboard stats
@@ -181,10 +180,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
+  // Telegram connection endpoints
+  app.post("/api/telegram/connect", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      telegramService.setPhoneNumber(phoneNumber);
+      await telegramService.connect();
+      res.json({ success: true, connected: telegramService.isClientConnected() });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to connect to Telegram" });
+    }
+  });
+
+  app.get("/api/telegram/status", async (req, res) => {
+    try {
+      res.json({ 
+        connected: telegramService.isClientConnected(),
+        sessionString: telegramService.getSessionString()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get Telegram status" });
+    }
+  });
+
+  app.post("/api/telegram/load-messages", async (req, res) => {
+    try {
+      const { chatId, limit } = req.body;
+      await telegramService.loadMessages(chatId, limit || 50);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to load messages" });
+    }
+  });
+
   // Cleanup on shutdown
   process.on('SIGTERM', () => {
     console.log('Shutting down services...');
-    telegramService.stopPolling();
+    telegramService.disconnect();
     schedulerService.stop();
     process.exit(0);
   });
