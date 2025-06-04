@@ -232,10 +232,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/telegram/load-messages", async (req, res) => {
     try {
-      const { chatId, limit } = req.body;
-      await telegramService.loadMessages(chatId, limit || 50);
-      res.json({ success: true });
+      if (!telegramService.isClientConnected()) {
+        return res.status(400).json({ message: "Telegram not connected" });
+      }
+
+      const { chatId, limit, loadAll } = req.body;
+      
+      if (loadAll) {
+        // Загружаем сообщения из всех чатов
+        const chats = await storage.getTelegramChats();
+        let totalLoaded = 0;
+        let messagesCount = 0;
+
+        console.log(`Starting bulk message load from ${chats.length} chats`);
+
+        for (const chat of chats) {
+          console.log(`Loading messages from chat: ${chat.title} (${chat.chatId})`);
+          try {
+            await telegramService.loadMessages(chat.chatId, limit || 100);
+            totalLoaded++;
+            messagesCount += (limit || 100);
+          } catch (error) {
+            console.error(`Failed to load messages from chat ${chat.title}:`, error);
+          }
+        }
+
+        res.json({ 
+          success: true, 
+          message: `Loaded messages from ${totalLoaded}/${chats.length} chats`,
+          chatsProcessed: totalLoaded,
+          totalChats: chats.length,
+          estimatedMessages: messagesCount
+        });
+      } else {
+        // Загружаем сообщения из конкретного чата
+        await telegramService.loadMessages(chatId, limit || 50);
+        res.json({ success: true, message: "Messages loaded from single chat" });
+      }
     } catch (error) {
+      console.log("Load messages error:", error);
       res.status(500).json({ message: "Failed to load messages" });
     }
   });

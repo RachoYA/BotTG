@@ -64,6 +64,29 @@ export default function TelegramSetup() {
     },
   });
 
+  const loadMessagesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/telegram/load-messages', { loadAll: true, limit: 100 });
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      toast({
+        title: "Сообщения загружены",
+        description: `Загружено сообщений из ${data.chatsProcessed}/${data.totalChats} чатов`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("Load messages error:", error);
+      toast({
+        title: "Ошибка загрузки",
+        description: error?.message || "Не удалось загрузить сообщения",
+        variant: "destructive",
+      });
+    },
+  });
+
   const verifyCodeMutation = useMutation({
     mutationFn: async ({ code, password }: { code: string; password?: string }) => {
       const response = await apiRequest('POST', '/api/telegram/verify', { code, password });
@@ -316,6 +339,23 @@ export default function TelegramSetup() {
             <p className="text-sm text-green-600 mt-1">
               Теперь вы можете выбирать чаты для мониторинга и получать сообщения в реальном времени.
             </p>
+          </div>
+        )}
+
+        {isConnected && (
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Загрузка сообщений</h4>
+            <p className="text-sm text-blue-600 mb-3">
+              Загрузите сообщения из всех чатов в базу данных для AI-анализа и извлечения задач
+            </p>
+            <Button 
+              onClick={() => loadMessagesMutation.mutate()}
+              disabled={loadMessagesMutation.isPending}
+              className="w-full"
+              variant="outline"
+            >
+              {loadMessagesMutation.isPending ? "Загрузка сообщений..." : "Загрузить все сообщения"}
+            </Button>
           </div>
         )}
 
