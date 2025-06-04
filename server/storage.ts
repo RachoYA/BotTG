@@ -213,16 +213,12 @@ export class MemStorage implements IStorage {
       {
         type: 'priority',
         title: 'Совет по приоритизации',
-        description: 'У вас 1 срочная задача. Рекомендуется сначала ответить на запрос по отчету.',
-        icon: 'fas fa-lightbulb',
-        color: 'primary'
+        content: 'У вас 1 срочная задача. Рекомендуется сначала ответить на запрос по отчету.'
       },
       {
-        type: 'time_management',
+        type: 'time_management', 
         title: 'Управление временем',
-        description: 'Есть непрочитанные сообщения, требующие вашего внимания.',
-        icon: 'fas fa-clock',
-        color: 'accent'
+        content: 'Есть непрочитанные сообщения, требующие вашего внимания.'
       }
     ];
 
