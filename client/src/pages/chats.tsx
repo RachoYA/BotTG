@@ -219,6 +219,50 @@ export default function ChatsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Messages View */}
+            {selectedChatId && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      Сообщения из чата: {chats?.find(c => c.chatId === selectedChatId)?.title || selectedChatId}
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedChatId(null)}
+                    >
+                      Закрыть
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingMessages ? (
+                    <p className="text-gray-500">Загрузка сообщений...</p>
+                  ) : Array.isArray(chatMessages) && chatMessages.length > 0 ? (
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                      {chatMessages.map((message: any) => (
+                        <div key={message.id} className="border-l-4 border-blue-200 pl-4 py-2">
+                          <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+                            <span>{message.senderName || 'Неизвестный отправитель'}</span>
+                            <span>{new Date(message.timestamp).toLocaleString('ru-RU')}</span>
+                          </div>
+                          <p className="text-gray-900">{message.content}</p>
+                          {message.isProcessed && (
+                            <Badge variant="secondary" className="mt-2">
+                              Обработано
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Нет сообщений в этом чате</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </main>
       </div>
