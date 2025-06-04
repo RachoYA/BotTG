@@ -18,6 +18,8 @@ import {
   type AiInsight,
   type InsertAiInsight,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, count } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -465,4 +467,200 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Telegram Chats
+  async getTelegramChats(): Promise<TelegramChat[]> {
+    return await db.select().from(telegramChats).orderBy(desc(telegramChats.id));
+  }
+
+  async getMonitoredChats(): Promise<TelegramChat[]> {
+    return await db.select().from(telegramChats).where(eq(telegramChats.isMonitored, true));
+  }
+
+  async getTelegramChatByChatId(chatId: string): Promise<TelegramChat | undefined> {
+    const [chat] = await db.select().from(telegramChats).where(eq(telegramChats.chatId, chatId));
+    return chat || undefined;
+  }
+
+  async createTelegramChat(insertChat: InsertTelegramChat): Promise<TelegramChat> {
+    const [chat] = await db
+      .insert(telegramChats)
+      .values(insertChat)
+      .returning();
+    return chat;
+  }
+
+  async updateTelegramChat(id: number, updates: Partial<TelegramChat>): Promise<TelegramChat | undefined> {
+    const [chat] = await db
+      .update(telegramChats)
+      .set(updates)
+      .where(eq(telegramChats.id, id))
+      .returning();
+    return chat || undefined;
+  }
+
+  // Telegram Messages
+  async getTelegramMessages(chatId?: string, limit?: number): Promise<TelegramMessage[]> {
+    let query = db.select().from(telegramMessages);
+    
+    if (chatId) {
+      query = query.where(eq(telegramMessages.chatId, chatId));
+    }
+    
+    query = query.orderBy(desc(telegramMessages.timestamp));
+    
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    return await query;
+  }
+
+  async getUnprocessedMessages(): Promise<TelegramMessage[]> {
+    return await db.select().from(telegramMessages)
+      .where(eq(telegramMessages.isProcessed, false))
+      .orderBy(desc(telegramMessages.timestamp));
+  }
+
+  async createTelegramMessage(insertMessage: InsertTelegramMessage): Promise<TelegramMessage> {
+    const [message] = await db
+      .insert(telegramMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
+  }
+
+  async markMessageAsProcessed(id: number): Promise<void> {
+    await db
+      .update(telegramMessages)
+      .set({ isProcessed: true })
+      .where(eq(telegramMessages.id, id));
+  }
+
+  // Extracted Tasks
+  async getExtractedTasks(): Promise<ExtractedTask[]> {
+    return await db.select().from(extractedTasks).orderBy(desc(extractedTasks.id));
+  }
+
+  async getTasksByStatus(status: string): Promise<ExtractedTask[]> {
+    return await db.select().from(extractedTasks)
+      .where(eq(extractedTasks.status, status))
+      .orderBy(desc(extractedTasks.id));
+  }
+
+  async getUrgentTasks(): Promise<ExtractedTask[]> {
+    return await db.select().from(extractedTasks)
+      .where(eq(extractedTasks.urgency, 'high'))
+      .orderBy(desc(extractedTasks.id));
+  }
+
+  async createExtractedTask(insertTask: InsertExtractedTask): Promise<ExtractedTask> {
+    const [task] = await db
+      .insert(extractedTasks)
+      .values(insertTask)
+      .returning();
+    return task;
+  }
+
+  async updateTaskStatus(id: number, status: string): Promise<ExtractedTask | undefined> {
+    const [task] = await db
+      .update(extractedTasks)
+      .set({ status })
+      .where(eq(extractedTasks.id, id))
+      .returning();
+    return task || undefined;
+  }
+
+  // Daily Summaries
+  async getDailySummary(date: string): Promise<DailySummary | undefined> {
+    const [summary] = await db.select().from(dailySummaries)
+      .where(eq(dailySummaries.date, date));
+    return summary || undefined;
+  }
+
+  async getLatestDailySummary(): Promise<DailySummary | undefined> {
+    const [summary] = await db.select().from(dailySummaries)
+      .orderBy(desc(dailySummaries.id))
+      .limit(1);
+    return summary || undefined;
+  }
+
+  async createDailySummary(insertSummary: InsertDailySummary): Promise<DailySummary> {
+    const [summary] = await db
+      .insert(dailySummaries)
+      .values(insertSummary)
+      .returning();
+    return summary;
+  }
+
+  // AI Insights
+  async getAiInsights(): Promise<AiInsight[]> {
+    return await db.select().from(aiInsights).orderBy(desc(aiInsights.id));
+  }
+
+  async getRecentAiInsights(limit = 5): Promise<AiInsight[]> {
+    return await db.select().from(aiInsights)
+      .orderBy(desc(aiInsights.id))
+      .limit(limit);
+  }
+
+  async createAiInsight(insertInsight: InsertAiInsight): Promise<AiInsight> {
+    const [insight] = await db
+      .insert(aiInsights)
+      .values(insertInsight)
+      .returning();
+    return insight;
+  }
+
+  // Dashboard Stats
+  async getDashboardStats(): Promise<{
+    unreadMessages: number;
+    urgentTasks: number;
+    activeChats: number;
+    completedTasksPercentage: number;
+  }> {
+    const [unreadCount] = await db.select({ count: count() }).from(telegramMessages)
+      .where(eq(telegramMessages.isProcessed, false));
+    
+    const [urgentCount] = await db.select({ count: count() }).from(extractedTasks)
+      .where(eq(extractedTasks.urgency, 'high'));
+    
+    const [activeCount] = await db.select({ count: count() }).from(telegramChats)
+      .where(eq(telegramChats.isMonitored, true));
+    
+    const [totalTasks] = await db.select({ count: count() }).from(extractedTasks);
+    const [completedTasks] = await db.select({ count: count() }).from(extractedTasks)
+      .where(eq(extractedTasks.status, 'completed'));
+    
+    const completedTasksPercentage = totalTasks.count > 0 
+      ? Math.round((completedTasks.count / totalTasks.count) * 100) 
+      : 0;
+
+    return {
+      unreadMessages: unreadCount.count,
+      urgentTasks: urgentCount.count,
+      activeChats: activeCount.count,
+      completedTasksPercentage,
+    };
+  }
+}
+
+export const storage = new DatabaseStorage();

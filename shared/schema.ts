@@ -5,7 +5,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"),
 });
 
 export const telegramChats = pgTable("telegram_chats", {
@@ -34,11 +34,11 @@ export const extractedTasks = pgTable("extracted_tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  priority: text("priority").notNull(), // 'urgent', 'important', 'normal'
-  status: text("status").notNull().default('new'), // 'new', 'in_progress', 'completed'
-  deadline: timestamp("deadline"),
-  sourceMessageId: text("source_message_id"),
-  sourceChatId: text("source_chat_id"),
+  urgency: text("urgency").notNull().default('medium'), // 'high', 'medium', 'low'
+  status: text("status").notNull().default('pending'), // 'pending', 'in_progress', 'completed'
+  deadline: text("deadline"), // Store as string for simplicity
+  chatId: text("chat_id"),
+  messageId: text("message_id"),
   extractedAt: timestamp("extracted_at").defaultNow(),
   completedAt: timestamp("completed_at"),
 });
