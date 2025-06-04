@@ -520,11 +520,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTelegramMessage(insertMessage: InsertTelegramMessage): Promise<TelegramMessage> {
-    const [message] = await db
-      .insert(telegramMessages)
-      .values(insertMessage)
-      .returning();
-    return message;
+    try {
+      const [message] = await db
+        .insert(telegramMessages)
+        .values(insertMessage)
+        .returning();
+      return message;
+    } catch (error: any) {
+      if (error.code === '23505') {
+        // Дублирование - получаем существующее сообщение
+        const [existing] = await db
+          .select()
+          .from(telegramMessages)
+          .where(and(
+            eq(telegramMessages.messageId, insertMessage.messageId),
+            eq(telegramMessages.chatId, insertMessage.chatId)
+          ));
+        return existing;
+      }
+      throw error;
+    }
   }
 
   async markMessageAsProcessed(id: number): Promise<void> {
