@@ -386,12 +386,36 @@ ${messagesText}`;
   }
 
   private isPersonalChat(chat: any): boolean {
-    // Определяем личный чат по различным признакам
-    return !chat.title.includes('группа') && 
-           !chat.title.includes('канал') && 
-           !chat.title.includes('Группа') && 
-           !chat.title.includes('Канал') &&
-           !chat.chatId.startsWith('-'); // Групповые чаты часто имеют отрицательный ID
+    // Исключаем сообщества, каналы и группы
+    const chatId = chat.chatId.toString();
+    const title = chat.title?.toLowerCase() || '';
+    
+    // Исключаем по ID: отрицательные ID обычно группы/каналы
+    if (chatId.startsWith('-')) {
+      return false;
+    }
+    
+    // Исключаем по названию: сообщества, группы, каналы
+    const excludeKeywords = [
+      'группа', 'канал', 'сообщество', 'чат', 'group', 'channel', 'community',
+      'команда', 'проект', 'отдел', 'департамент', 'company', 'corp',
+      'общий', 'рабочий', 'work', 'team', 'dev', 'разработка'
+    ];
+    
+    for (const keyword of excludeKeywords) {
+      if (title.includes(keyword)) {
+        return false;
+      }
+    }
+    
+    // Дополнительная проверка: если в названии есть несколько слов заглавными буквами
+    // это часто указывает на корпоративный/групповой чат
+    const uppercaseWords = (chat.title || '').match(/[А-ЯA-Z]{2,}/g);
+    if (uppercaseWords && uppercaseWords.length > 1) {
+      return false;
+    }
+    
+    return true; // Считаем личным чатом
   }
 
   private async loadChatMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<void> {

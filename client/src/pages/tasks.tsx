@@ -5,11 +5,71 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Clock, AlertTriangle, Calendar, MessageSquare } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CheckCircle, Clock, AlertTriangle, Calendar, MessageSquare, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+
+// Компонент модального окна для просмотра чата
+function ChatModal({ chatId, isOpen, onClose }: { chatId: string; isOpen: boolean; onClose: () => void }) {
+  const { data: messages, isLoading } = useQuery({
+    queryKey: ['/api/chats', chatId, 'messages'],
+    queryFn: () => fetch(`/api/chats/${chatId}/messages`).then(res => res.json()),
+    enabled: isOpen && !!chatId,
+  });
+
+  const { data: chats } = useQuery({
+    queryKey: ['/api/chats'],
+    enabled: isOpen && !!chatId,
+  });
+
+  const chat = chats?.find((c: any) => c.chatId === chatId);
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Переписка: {chat?.title || `Чат ${chatId}`}</span>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto max-h-[60vh] space-y-3 p-4">
+          {isLoading ? (
+            <div className="text-center py-8">Загрузка сообщений...</div>
+          ) : messages && messages.length > 0 ? (
+            messages.map((message: any) => (
+              <div key={message.id} className="border-b pb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-sm text-blue-600">
+                    {message.senderName || 'Неизвестный'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(message.timestamp).toLocaleString('ru-RU')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700">{message.text}</p>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Сообщения не найдены
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function TasksPage() {
   const { toast } = useToast();
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['/api/tasks'],
@@ -163,7 +223,7 @@ export default function TasksPage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-auto p-1 text-blue-600 hover:text-blue-800"
-                                  onClick={() => window.open(`/chats?chat=${task.chatId}`, '_blank')}
+                                  onClick={() => setSelectedChatId(task.chatId)}
                                 >
                                   <MessageSquare className="h-3 w-3 mr-1" />
                                   Чат {task.chatId}
@@ -218,6 +278,15 @@ export default function TasksPage() {
           </div>
         </main>
       </div>
+      
+      {/* Модальное окно для просмотра чата */}
+      {selectedChatId && (
+        <ChatModal
+          chatId={selectedChatId}
+          isOpen={!!selectedChatId}
+          onClose={() => setSelectedChatId(null)}
+        />
+      )}
     </div>
   );
 }
