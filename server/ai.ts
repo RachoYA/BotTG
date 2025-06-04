@@ -27,14 +27,34 @@ async function callOpenAI(prompt: string, systemPrompt: string): Promise<string>
   }
 }
 
+// Функция для тестирования модели без JSON форматирования
+async function testOpenAI(prompt: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "You are a helpful AI assistant. Respond clearly and concisely." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    return response.choices[0].message.content || "No response received";
+  } catch (error: any) {
+    console.error("OpenAI test error:", error);
+    throw new Error(`OpenAI API error: ${error.message || 'Unknown error'}`);
+  }
+}
+
 export class AIService {
   async testModel(prompt: string): Promise<string> {
     try {
-      const response = await callOpenAI(prompt, "You are a helpful AI assistant. Respond clearly and concisely.");
+      const response = await testOpenAI(prompt);
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI model test failed:", error);
-      throw new Error(`AI model test failed: ${error.message}`);
+      throw new Error(`AI model test failed: ${error.message || 'Unknown error'}`);
     }
   }
 

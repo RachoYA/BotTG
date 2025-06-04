@@ -305,11 +305,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         response,
         timestamp: new Date().toISOString()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI test error:", error);
       res.status(500).json({ 
         error: "AI model test failed", 
-        details: error.message 
+        details: error.message || "Unknown error"
       });
     }
   });
@@ -325,11 +325,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "AI insights generated successfully",
         timestamp: new Date().toISOString()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI insights generation error:", error);
       res.status(500).json({ 
         error: "Failed to generate AI insights", 
-        details: error.message 
+        details: error.message || "Unknown error"
       });
     }
   });
