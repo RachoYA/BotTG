@@ -66,9 +66,9 @@ export default function TasksPage() {
     );
   }
 
-  const pendingTasks = tasks?.filter((t: any) => t.status === 'pending') || [];
-  const inProgressTasks = tasks?.filter((t: any) => t.status === 'in_progress') || [];
-  const completedTasks = tasks?.filter((t: any) => t.status === 'completed') || [];
+  const pendingTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'pending') : [];
+  const inProgressTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'in_progress') : [];
+  const completedTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'completed') : [];
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

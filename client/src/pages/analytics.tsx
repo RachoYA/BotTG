@@ -22,28 +22,28 @@ export default function AnalyticsPage() {
   });
 
   // Аналитика задач
-  const totalTasks = tasks?.length || 0;
-  const completedTasks = tasks?.filter((t: any) => t.status === 'completed').length || 0;
-  const highPriorityTasks = tasks?.filter((t: any) => t.urgency === 'high').length || 0;
+  const totalTasks = Array.isArray(tasks) ? tasks.length : 0;
+  const completedTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'completed').length : 0;
+  const highPriorityTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.urgency === 'high').length : 0;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Аналитика чатов
-  const totalChats = chats?.length || 0;
-  const monitoredChats = chats?.filter((c: any) => c.isMonitored).length || 0;
-  const activeChats = chats?.filter((c: any) => c.isMonitored && c.messageCount > 0).length || 0;
+  const totalChats = Array.isArray(chats) ? chats.length : 0;
+  const monitoredChats = Array.isArray(chats) ? chats.filter((c: any) => c.isMonitored).length : 0;
+  const activeChats = Array.isArray(chats) ? chats.filter((c: any) => c.isMonitored && c.messageCount > 0).length : 0;
 
   // Распределение задач по приоритету
   const tasksByPriority = {
-    high: tasks?.filter((t: any) => t.urgency === 'high').length || 0,
-    medium: tasks?.filter((t: any) => t.urgency === 'medium').length || 0,
-    low: tasks?.filter((t: any) => t.urgency === 'low').length || 0,
+    high: Array.isArray(tasks) ? tasks.filter((t: any) => t.urgency === 'high').length : 0,
+    medium: Array.isArray(tasks) ? tasks.filter((t: any) => t.urgency === 'medium').length : 0,
+    low: Array.isArray(tasks) ? tasks.filter((t: any) => t.urgency === 'low').length : 0,
   };
 
   // Распределение задач по статусу
   const tasksByStatus = {
-    pending: tasks?.filter((t: any) => t.status === 'pending').length || 0,
-    in_progress: tasks?.filter((t: any) => t.status === 'in_progress').length || 0,
-    completed: tasks?.filter((t: any) => t.status === 'completed').length || 0,
+    pending: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'pending').length : 0,
+    in_progress: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'in_progress').length : 0,
+    completed: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'completed').length : 0,
   };
 
   return (
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* AI Insights */}
-            {insights && insights.length > 0 && (
+            {Array.isArray(insights) && insights.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>AI Инсайты</CardTitle>
