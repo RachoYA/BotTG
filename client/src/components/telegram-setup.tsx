@@ -15,7 +15,9 @@ export default function TelegramSetup() {
   const queryClient = useQueryClient();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [password, setPassword] = useState("");
   const [needsCode, setNeedsCode] = useState(false);
+  const [needsPassword, setNeedsPassword] = useState(false);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ['/api/telegram/status'],
@@ -62,25 +64,36 @@ export default function TelegramSetup() {
   });
 
   const verifyCodeMutation = useMutation({
-    mutationFn: async (code: string) => {
-      return await apiRequest('POST', '/api/telegram/verify', { code });
+    mutationFn: async ({ code, password }: { code: string; password?: string }) => {
+      return await apiRequest('POST', '/api/telegram/verify', { code, password });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
       setNeedsCode(false);
+      setNeedsPassword(false);
       setVerificationCode("");
+      setPassword("");
       toast({
         title: "Успешно подключено",
         description: "Telegram подключен успешно",
       });
     },
-    onError: () => {
-      toast({
-        title: "Неверный код",
-        description: "Проверьте код и попробуйте снова",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error("Verify error:", error);
+      if (error?.needsPassword) {
+        setNeedsPassword(true);
+        toast({
+          title: "Требуется пароль",
+          description: "Введите пароль двухфакторной аутентификации",
+        });
+      } else {
+        toast({
+          title: "Ошибка авторизации",
+          description: error?.message || "Проверьте код и попробуйте снова",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -105,7 +118,10 @@ export default function TelegramSetup() {
       });
       return;
     }
-    verifyCodeMutation.mutate(verificationCode);
+    verifyCodeMutation.mutate({ 
+      code: verificationCode, 
+      password: needsPassword ? password : undefined 
+    });
   };
 
   const isConnected = status?.connected || false;
@@ -211,6 +227,26 @@ export default function TelegramSetup() {
                   />
                 </div>
               </div>
+
+              {needsPassword && (
+                <div>
+                  <Label htmlFor="password">Пароль двухфакторной аутентификации</Label>
+                  <div className="flex items-center mt-1">
+                    <Key className="w-4 h-4 text-gray-500 mr-2" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Введите пароль"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Требуется пароль от двухфакторной аутентификации Telegram
+                  </p>
+                </div>
+              )}
 
               <div className="flex space-x-2">
                 <Button 

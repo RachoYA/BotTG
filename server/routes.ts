@@ -186,11 +186,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { phoneNumber } = req.body;
       telegramService.setPhoneNumber(phoneNumber);
       const result = await telegramService.connect();
-      res.json({ 
+      const response = { 
         success: true, 
         connected: telegramService.isClientConnected(),
         needsCode: result?.needsCode || false
-      });
+      };
+      console.log("Connect API response:", response);
+      res.json(response);
     } catch (error) {
       console.log("Telegram connect error:", error);
       res.status(500).json({ message: "Failed to connect to Telegram" });
@@ -199,12 +201,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/telegram/verify", async (req, res) => {
     try {
-      const { code } = req.body;
-      await telegramService.verifyCode(code);
+      const { code, password } = req.body;
+      await telegramService.verifyCode(code, password);
       res.json({ success: true, connected: telegramService.isClientConnected() });
-    } catch (error) {
+    } catch (error: any) {
       console.log("Telegram verify error:", error);
-      res.status(500).json({ message: "Failed to verify code" });
+      if (error.needsPassword) {
+        res.status(400).json({ 
+          message: "Two-factor authentication password required",
+          needsPassword: true 
+        });
+      } else {
+        res.status(500).json({ message: error.message || "Failed to verify code" });
+      }
     }
   });
 

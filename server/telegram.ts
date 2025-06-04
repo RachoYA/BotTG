@@ -69,7 +69,7 @@ export class TelegramService {
     }
   }
 
-  async verifyCode(code: string): Promise<void> {
+  async verifyCode(code: string, password?: string): Promise<void> {
     try {
       console.log("Verifying code:", code, "with hash:", this.phoneCodeHash);
       
@@ -77,30 +77,64 @@ export class TelegramService {
         await this.client.connect();
       }
 
-      // Используем правильный API метод для авторизации
-      const result = await this.client.invoke(
-        new Api.auth.SignIn({
-          phoneNumber: this.phoneNumber,
-          phoneCodeHash: this.phoneCodeHash,
-          phoneCode: code,
-        })
-      );
+      try {
+        // Сначала пытаемся авторизоваться только с кодом
+        const result = await this.client.invoke(
+          new Api.auth.SignIn({
+            phoneNumber: this.phoneNumber,
+            phoneCodeHash: this.phoneCodeHash,
+            phoneCode: code,
+          })
+        );
 
-      console.log("Auth result:", result.className);
+        console.log("Auth result:", result.className);
 
-      if (result.className === "auth.Authorization") {
-        this.isConnected = true;
-        this.authState = 'connected';
-        console.log("Successfully authenticated with Telegram");
-        
-        // Save the session string for future use
-        const sessionString = this.client.session.save();
-        console.log("New session string saved");
-        
-        // Load dialogs after successful authentication
-        await this.loadDialogs();
-      } else {
-        throw new Error("Unexpected authentication result: " + result.className);
+        if (result.className === "auth.Authorization") {
+          this.isConnected = true;
+          this.authState = 'connected';
+          console.log("Successfully authenticated with Telegram");
+          
+          const sessionString = this.client.session.save();
+          console.log("New session string saved");
+          
+          await this.loadDialogs();
+        }
+      } catch (error: any) {
+        if (error.errorMessage === "SESSION_PASSWORD_NEEDED") {
+          console.log("Two-factor authentication required");
+          
+          if (!password) {
+            // Если пароль не предоставлен, бросаем специальную ошибку
+            const passwordError = new Error("Two-factor authentication password required");
+            (passwordError as any).needsPassword = true;
+            throw passwordError;
+          }
+
+          // Получаем информацию о пароле
+          const passwordInfo = await this.client.invoke(new Api.account.GetPassword());
+          
+          // Вычисляем хеш пароля
+          const { computeCheck } = await import("telegram/Password");
+          const passwordHash = await computeCheck(passwordInfo, password);
+
+          // Авторизуемся с паролем
+          const passwordResult = await this.client.invoke(
+            new Api.auth.CheckPassword({ password: passwordHash })
+          );
+
+          if (passwordResult.className === "auth.Authorization") {
+            this.isConnected = true;
+            this.authState = 'connected';
+            console.log("Successfully authenticated with password");
+            
+            const sessionString = this.client.session.save();
+            console.log("New session string saved");
+            
+            await this.loadDialogs();
+          }
+        } else {
+          throw error;
+        }
       }
     } catch (error: any) {
       console.error("Failed to verify code:", error);
