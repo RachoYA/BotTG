@@ -244,7 +244,6 @@ export default function Dashboard() {
 
             {/* Right Sidebar */}
             <div className="space-y-8">
-              <ChatMonitoring />
               <AIInsights />
               <QuickActions />
             </div>

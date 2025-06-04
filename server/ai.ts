@@ -116,50 +116,88 @@ export class AIService {
 
   private async extractTasksFromMessages(messages: any[]): Promise<void> {
     try {
+      if (messages.length === 0) return;
+
+      // Получаем название чата для контекста
+      const chatTitle = await this.getChatTitle(messages[0]?.chatId);
+      
+      // Получаем существующие задачи из этого чата для проверки дублирования
+      const existingTasks = await storage.getExtractedTasks();
+      const chatTasks = existingTasks.filter(t => t.chatId === messages[0]?.chatId);
+      const existingTaskTitles = chatTasks.map(t => t.title.toLowerCase());
+
       const messagesText = messages.map(m => `[${m.timestamp}] ${m.senderName || 'Unknown'}: ${m.text}`).join('\n');
       
-      const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки. Анализируй сообщения и извлекай задачи, поручения, дедлайны и важную информацию.
+      const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки. 
+      Анализируй сообщения и извлекай задачи, поручения, дедлайны ТОЛЬКО если они НЕ выполнены.
+      ВАЖНО: Учитывай контекст - если в переписке есть упоминания о выполнении задачи, НЕ создавай её.
+      НЕ создавай дубликаты существующих задач.
 
 Верни результат в JSON формате:
 {
   "tasks": [
     {
       "title": "краткое название задачи",
-      "description": "подробное описание",
+      "description": "подробное описание с контекстом",
       "priority": "низкий|средний|высокий|критический",
       "deadline": "YYYY-MM-DD или null если не указан",
-      "status": "новая",
-      "assignee": "кому поручена задача или null",
-      "source": "краткое описание источника"
+      "isCompleted": false,
+      "isDuplicate": false
     }
   ]
 }
 
 Если задач нет, верни {"tasks": []}`;
 
-      const prompt = `Проанализируй следующие сообщения и извлеки все задачи, поручения и дедлайны:\n\n${messagesText}`;
+      const existingContext = existingTaskTitles.length > 0 
+        ? `\nСуществующие задачи из этого чата: ${existingTaskTitles.join(', ')}`
+        : '';
+
+      const prompt = `Проанализируй следующие сообщения из чата "${chatTitle}" и извлеки все задачи, поручения и дедлайны.
+      ВАЖНО: Создавай задачи только если они НЕ выполнены согласно контексту переписки.
+      НЕ создавай дубликаты существующих задач.${existingContext}
+
+${messagesText}`;
       
       const response = await callOpenAI(prompt, systemPrompt);
       const parsed = JSON.parse(response);
       
       if (parsed.tasks && Array.isArray(parsed.tasks)) {
         for (const task of parsed.tasks) {
-          const insertTask: InsertExtractedTask = {
-            title: task.title,
-            description: task.description,
-            urgency: task.priority || 'medium',
-            deadline: task.deadline || null,
-            status: 'pending',
-            chatId: messages[0]?.chatId || ''
-          };
+          // Дополнительная проверка на дублирование
+          const isDuplicate = existingTaskTitles.some(existing => 
+            existing.includes(task.title.toLowerCase()) || 
+            task.title.toLowerCase().includes(existing)
+          );
           
-          await storage.createExtractedTask(insertTask);
-          console.log(`Создана задача: ${task.title}`);
+          if (!isDuplicate && !task.isCompleted && !task.isDuplicate) {
+            const insertTask: InsertExtractedTask = {
+              title: task.title,
+              description: `[${chatTitle}] ${task.description}`,
+              urgency: this.mapPriorityToUrgency(task.priority),
+              deadline: task.deadline || null,
+              status: 'pending',
+              chatId: messages[0]?.chatId || ''
+            };
+            
+            await storage.createExtractedTask(insertTask);
+            console.log(`Создана задача: ${task.title} из чата ${chatTitle}`);
+          }
         }
       }
     } catch (error) {
       console.error("Ошибка при извлечении задач:", error);
     }
+  }
+
+  private mapPriorityToUrgency(priority: string): string {
+    const priorityMap: Record<string, string> = {
+      'низкий': 'low',
+      'средний': 'medium', 
+      'высокий': 'high',
+      'критический': 'high'
+    };
+    return priorityMap[priority] || 'medium';
   }
 
   async generateDailySummary(date: string): Promise<void> {

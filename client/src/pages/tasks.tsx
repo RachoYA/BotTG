@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Clock, AlertTriangle, Calendar } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, Calendar, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TasksPage() {
@@ -158,7 +158,16 @@ export default function TasksPage() {
                             {task.chatId && (
                               <>
                                 <span>•</span>
-                                <span>Чат: {task.chatId}</span>
+                                <span className="text-gray-500">Источник:</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-auto p-1 text-blue-600 hover:text-blue-800"
+                                  onClick={() => window.open(`/chats?chat=${task.chatId}`, '_blank')}
+                                >
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Чат {task.chatId}
+                                </Button>
                               </>
                             )}
                           </div>
