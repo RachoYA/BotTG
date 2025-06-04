@@ -27,18 +27,27 @@ export default function TelegramSetup() {
       return await apiRequest('POST', '/api/telegram/connect', { phoneNumber });
     },
     onSuccess: (data: any) => {
+      console.log("Connect success response:", data);
       queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
-      if (data?.needsCode) {
+      if (data?.needsCode === true) {
+        console.log("Opening code verification modal");
         setNeedsCode(true);
         toast({
           title: "Код подтверждения",
           description: "Введите код, который пришел в Telegram",
         });
-      } else {
+      } else if (data?.connected === true) {
         queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
         toast({
           title: "Подключение к Telegram",
           description: "Telegram подключен успешно",
+        });
+      } else {
+        console.log("Unexpected response:", data);
+        toast({
+          title: "Ошибка",
+          description: "Неожиданный ответ сервера",
+          variant: "destructive",
         });
       }
     },
