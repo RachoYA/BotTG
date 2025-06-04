@@ -154,18 +154,35 @@ export default function TelegramSetup() {
               </div>
             </div>
 
-            <Button 
-              onClick={handleConnect}
-              disabled={connectMutation.isPending || !phoneNumber.trim()}
-              className="w-full"
-            >
-              {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={handleConnect}
+                disabled={connectMutation.isPending || !phoneNumber.trim()}
+                className="w-full"
+              >
+                {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
+              </Button>
+              
+              {/* Debug button for testing modal */}
+              <Button 
+                onClick={() => {
+                  console.log("Debug: Opening modal manually");
+                  setNeedsCode(true);
+                }}
+                variant="outline"
+                className="w-full text-xs"
+              >
+                Тест модального окна
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Модальное окно для ввода кода */}
-        <Dialog open={needsCode} onOpenChange={setNeedsCode}>
+        <Dialog open={needsCode} onOpenChange={(open) => {
+          console.log("Modal open change:", open);
+          setNeedsCode(open);
+        }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Код подтверждения Telegram</DialogTitle>
