@@ -2,6 +2,7 @@ import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { storage } from "./storage";
 import { InsertTelegramChat, InsertTelegramMessage } from "@shared/schema";
+import { Api } from "telegram";
 
 export class TelegramService {
   private client: TelegramClient;
@@ -12,41 +13,74 @@ export class TelegramService {
   private phoneNumber: string = "";
   private authFlow: any = null;
   private currentCode: string = "";
+  private authState: 'none' | 'phone_sent' | 'code_needed' | 'connected' = 'none';
 
   constructor() {
     this.apiId = parseInt(process.env.TELEGRAM_API_ID || "24788533");
     this.apiHash = process.env.TELEGRAM_API_HASH || "3a5e530327b9e7e8e90b54c6ab0259a1";
-    this.session = new StringSession(process.env.TELEGRAM_SESSION || "");
+    this.phoneNumber = process.env.TELEGRAM_PHONE_NUMBER || "";
+    
+    // Validate session string format
+    const sessionString = process.env.TELEGRAM_SESSION_STRING || "";
+    try {
+      this.session = new StringSession(sessionString);
+    } catch (e) {
+      console.log("Invalid session string, creating empty session");
+      this.session = new StringSession("");
+    }
     
     this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
       connectionRetries: 5,
     });
   }
 
-  async connect(): Promise<void> {
+  async connect(): Promise<{ needsCode?: boolean }> {
     try {
       console.log("Connecting to Telegram...");
-      await this.client.start({
-        phoneNumber: async () => this.phoneNumber,
-        password: async () => {
-          // Если нужен пароль двухфакторной аутентификации
-          return process.env.TELEGRAM_PASSWORD || "";
-        },
-        phoneCode: async () => {
-          // В реальном приложении нужно будет запросить код у пользователя
-          return process.env.TELEGRAM_CODE || "";
-        },
-        onError: (err) => console.log("Telegram auth error:", err),
-      });
-
-      this.isConnected = true;
-      console.log("Successfully connected to Telegram");
       
-      // Получаем список диалогов при подключении
-      await this.loadDialogs();
+      await this.client.connect();
+      
+      if (await this.client.checkAuthorization()) {
+        this.isConnected = true;
+        this.authState = 'connected';
+        console.log("Successfully connected to Telegram with session");
+        await this.loadDialogs();
+        return { needsCode: false };
+      } else {
+        console.log("Session invalid, authentication needed");
+        this.authState = 'code_needed';
+        return { needsCode: true };
+      }
     } catch (error) {
       console.error("Failed to connect to Telegram:", error);
       this.isConnected = false;
+      this.authState = 'none';
+      throw error;
+    }
+  }
+
+  async verifyCode(code: string): Promise<void> {
+    try {
+      console.log("Starting verification with code:", code);
+      
+      // Use the high-level start method but now with the code available
+      await this.client.start({
+        phoneNumber: async () => this.phoneNumber,
+        password: async () => process.env.TELEGRAM_PASSWORD || "",
+        phoneCode: async () => code,
+        onError: (err) => console.log("Auth error:", err),
+      });
+
+      this.isConnected = true;
+      this.authState = 'connected';
+      console.log("Successfully authenticated with Telegram");
+      
+      // Load dialogs after successful authentication
+      await this.loadDialogs();
+    } catch (error: any) {
+      console.error("Failed to verify code:", error);
+      this.authState = 'code_needed'; // Reset to allow retry
+      throw error;
     }
   }
 
