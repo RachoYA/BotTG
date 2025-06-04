@@ -2,6 +2,8 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { storage } from "./storage";
 import { InsertTelegramChat, InsertTelegramMessage } from "@shared/schema";
+import * as fs from "fs";
+import * as path from "path";
 
 export class TelegramService {
   private client: TelegramClient;
@@ -24,6 +26,7 @@ export class TelegramService {
     const sessionString = process.env.TELEGRAM_SESSION_STRING || "";
     try {
       this.session = new StringSession(sessionString);
+      console.log("Loaded session string from environment");
     } catch (e) {
       console.log("Invalid session string, creating empty session");
       this.session = new StringSession("");
@@ -32,6 +35,33 @@ export class TelegramService {
     this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
       connectionRetries: 5,
     });
+
+    // Автоматически подключаемся при запуске если есть валидная сессия
+    if (sessionString && sessionString.length > 10) {
+      this.autoConnect();
+    }
+  }
+
+  private async autoConnect(): Promise<void> {
+    try {
+      console.log("Attempting auto-connect with saved session...");
+      await this.client.connect();
+      
+      if (await this.client.checkAuthorization()) {
+        this.isConnected = true;
+        this.authState = 'connected';
+        console.log("Auto-connected to Telegram successfully");
+        await this.loadDialogs();
+      } else {
+        console.log("Saved session is invalid, manual auth required");
+        this.isConnected = false;
+        this.authState = 'none';
+      }
+    } catch (error) {
+      console.error("Auto-connect failed:", error);
+      this.isConnected = false;
+      this.authState = 'none';
+    }
   }
 
   async connect(): Promise<{ needsCode?: boolean }> {
@@ -95,7 +125,8 @@ export class TelegramService {
           console.log("Successfully authenticated with Telegram");
           
           const sessionString = this.client.session.save();
-          console.log("New session string saved");
+          this.saveSessionString(sessionString);
+          console.log("New session string saved to environment");
           
           await this.loadDialogs();
         }
@@ -128,7 +159,8 @@ export class TelegramService {
             console.log("Successfully authenticated with password");
             
             const sessionString = this.client.session.save();
-            console.log("New session string saved");
+            this.saveSessionString(sessionString);
+            console.log("New session string saved to environment");
             
             await this.loadDialogs();
           }
@@ -255,6 +287,21 @@ export class TelegramService {
 
   isClientConnected(): boolean {
     return this.isConnected;
+  }
+
+  private saveSessionString(sessionString: string): void {
+    try {
+      // Сохраняем сессию в файл для постоянного хранения
+      const sessionPath = path.join(process.cwd(), '.telegram_session');
+      fs.writeFileSync(sessionPath, sessionString, 'utf8');
+      
+      // Также обновляем переменную окружения для текущей сессии
+      process.env.TELEGRAM_SESSION_STRING = sessionString;
+      
+      console.log("Session saved to file and environment variable");
+    } catch (error) {
+      console.error("Failed to save session string:", error);
+    }
   }
 
   getSessionString(): string {
