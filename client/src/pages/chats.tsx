@@ -25,7 +25,13 @@ export default function ChatsPage() {
   });
 
   const { data: chatMessages, isLoading: isLoadingMessages } = useQuery({
-    queryKey: ['/api/chats', selectedChatId, 'messages'],
+    queryKey: ['/api/messages', selectedChatId],
+    queryFn: async () => {
+      if (!selectedChatId) return [];
+      const response = await fetch(`/api/messages?chatId=${selectedChatId}&limit=50`);
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      return response.json();
+    },
     enabled: !!selectedChatId,
   });
 
