@@ -22,11 +22,29 @@ export class TelegramService {
     this.apiHash = process.env.TELEGRAM_API_HASH || "3a5e530327b9e7e8e90b54c6ab0259a1";
     this.phoneNumber = process.env.TELEGRAM_PHONE_NUMBER || "";
     
-    // Validate session string format
-    const sessionString = process.env.TELEGRAM_SESSION_STRING || "";
+    // Загружаем сессию из файла или переменной окружения
+    let sessionString = process.env.TELEGRAM_SESSION_STRING || "";
+    
+    // Пытаемся загрузить из файла если переменная пустая
+    if (!sessionString) {
+      try {
+        const sessionPath = path.join(process.cwd(), '.telegram_session');
+        if (fs.existsSync(sessionPath)) {
+          sessionString = fs.readFileSync(sessionPath, 'utf8');
+          console.log("Loaded session string from file");
+        }
+      } catch (e) {
+        console.log("No session file found");
+      }
+    }
+    
     try {
       this.session = new StringSession(sessionString);
-      console.log("Loaded session string from environment");
+      if (sessionString) {
+        console.log("Using existing session string");
+      } else {
+        console.log("Creating empty session");
+      }
     } catch (e) {
       console.log("Invalid session string, creating empty session");
       this.session = new StringSession("");
@@ -124,9 +142,10 @@ export class TelegramService {
           this.authState = 'connected';
           console.log("Successfully authenticated with Telegram");
           
-          const sessionString = this.client.session.save();
-          this.saveSessionString(sessionString);
-          console.log("New session string saved to environment");
+          const sessionString = this.session.save();
+          if (sessionString) {
+            this.saveSessionString(sessionString);
+          }
           
           await this.loadDialogs();
         }
@@ -158,9 +177,12 @@ export class TelegramService {
             this.authState = 'connected';
             console.log("Successfully authenticated with password");
             
-            const sessionString = this.client.session.save();
-            this.saveSessionString(sessionString);
-            console.log("New session string saved to environment");
+            try {
+              const sessionString = this.session.save() as string;
+              this.saveSessionString(sessionString);
+            } catch (error) {
+              console.error("Failed to save session:", error);
+            }
             
             await this.loadDialogs();
           }
