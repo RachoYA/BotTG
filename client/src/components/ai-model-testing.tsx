@@ -14,7 +14,7 @@ export default function AIModelTesting() {
 
   const testModelMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      return await apiRequest("/api/ai/test", "POST", { prompt });
+      return await apiRequest("POST", "/api/ai/test", { prompt });
     },
     onSuccess: (data) => {
       toast({
@@ -33,7 +33,7 @@ export default function AIModelTesting() {
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/ai/generate-insights", "POST", {});
+      return await apiRequest("POST", "/api/ai/generate-insights", {});
     },
     onSuccess: () => {
       toast({
