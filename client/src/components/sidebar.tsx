@@ -1,17 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Sidebar() {
+  const [location] = useLocation();
   const { data: stats } = useQuery({
     queryKey: ['/api/dashboard/stats'],
+    refetchInterval: 10000,
   });
 
+  const isActive = (path: string) => location === path;
+
   return (
-    <div className="w-64 bg-white shadow-lg flex flex-col">
-      <div className="p-6 border-b">
+    <div className="bg-white h-full w-64 border-r border-gray-200 flex flex-col">
+      <div className="px-6 py-4 border-b border-gray-200">
         <h1 className="text-xl font-bold text-gray-800">
-          <i className="fab fa-telegram-plane text-primary mr-2"></i>
           TG Manager
         </h1>
         <p className="text-sm text-gray-600 mt-1">AI Копилот</p>
@@ -20,41 +23,66 @@ export default function Sidebar() {
       <nav className="flex-1 px-4 py-6">
         <ul className="space-y-2">
           <li>
-            <a href="#" className="flex items-center px-4 py-3 text-primary bg-blue-50 rounded-lg font-medium">
+            <Link 
+              href="/" 
+              className={`flex items-center px-4 py-3 rounded-lg font-medium ${
+                isActive('/') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <i className="fas fa-tachometer-alt mr-3"></i>
               Dashboard
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Link 
+              href="/chats" 
+              className={`flex items-center px-4 py-3 rounded-lg ${
+                isActive('/chats') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <i className="fas fa-comments mr-3"></i>
               Чаты
-              {stats?.activeChats && (
+              {stats?.activeChats && stats.activeChats > 0 && (
                 <Badge variant="destructive" className="ml-auto">
                   {stats.activeChats}
                 </Badge>
               )}
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Link 
+              href="/tasks" 
+              className={`flex items-center px-4 py-3 rounded-lg ${
+                isActive('/tasks') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <i className="fas fa-tasks mr-3"></i>
               Задачи
-              {stats?.urgentTasks && (
+              {stats?.urgentTasks && stats.urgentTasks > 0 && (
                 <Badge variant="destructive" className="ml-auto">
                   {stats.urgentTasks}
                 </Badge>
               )}
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Link 
+              href="/analytics" 
+              className={`flex items-center px-4 py-3 rounded-lg ${
+                isActive('/analytics') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <i className="fas fa-chart-line mr-3"></i>
               Аналитика
-            </a>
+            </Link>
           </li>
           <li>
-            <Link href="/settings" className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Link 
+              href="/settings" 
+              className={`flex items-center px-4 py-3 rounded-lg ${
+                isActive('/settings') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <i className="fas fa-cog mr-3"></i>
               Настройки
             </Link>
