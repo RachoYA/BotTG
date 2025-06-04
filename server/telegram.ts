@@ -1,8 +1,7 @@
-import { TelegramClient } from "telegram";
+import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { storage } from "./storage";
 import { InsertTelegramChat, InsertTelegramMessage } from "@shared/schema";
-import { Api } from "telegram";
 
 export class TelegramService {
   private client: TelegramClient;
@@ -47,8 +46,17 @@ export class TelegramService {
         await this.loadDialogs();
         return { needsCode: false };
       } else {
-        console.log("Session invalid, authentication needed");
+        console.log("Session invalid, starting auth flow...");
+        // Начинаем процесс авторизации
+        await this.client.sendCode(
+          {
+            apiId: this.apiId,
+            apiHash: this.apiHash,
+          },
+          this.phoneNumber
+        );
         this.authState = 'code_needed';
+        console.log("Code sent to phone number");
         return { needsCode: true };
       }
     } catch (error) {
@@ -185,6 +193,7 @@ export class TelegramService {
 
   setPhoneNumber(phoneNumber: string): void {
     this.phoneNumber = phoneNumber;
+    console.log("Phone number set:", phoneNumber);
   }
 
   async getAvailableChats(): Promise<any[]> {

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageCircle, CheckCircle, AlertCircle, Phone, Key } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,14 +38,15 @@ export default function TelegramSetup() {
         queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
         toast({
           title: "Подключение к Telegram",
-          description: "Начата авторизация в Telegram",
+          description: "Telegram подключен успешно",
         });
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Connect error:", error);
       toast({
         title: "Ошибка подключения",
-        description: "Не удалось подключиться к Telegram",
+        description: error?.message || "Не удалось подключиться к Telegram",
         variant: "destructive",
       });
     },
@@ -128,78 +130,83 @@ export default function TelegramSetup() {
 
         {!isConnected && (
           <div className="space-y-3">
-            {!needsCode ? (
-              <>
-                <div>
-                  <Label htmlFor="phone">Номер телефона</Label>
-                  <div className="flex items-center mt-1">
-                    <Phone className="w-4 h-4 text-gray-500 mr-2" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="+7 (999) 123-45-67"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
+            <div>
+              <Label htmlFor="phone">Номер телефона</Label>
+              <div className="flex items-center mt-1">
+                <Phone className="w-4 h-4 text-gray-500 mr-2" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+7 (999) 123-45-67"
+                  className="flex-1"
+                />
+              </div>
+            </div>
 
-                <Button 
-                  onClick={handleConnect}
-                  disabled={connectMutation.isPending || !phoneNumber.trim()}
-                  className="w-full"
-                >
-                  {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-blue-800 font-medium">Код отправлен в Telegram</p>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Введите код подтверждения, который пришел в Telegram на номер {phoneNumber}
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="code">Код подтверждения</Label>
-                  <div className="flex items-center mt-1">
-                    <Key className="w-4 h-4 text-gray-500 mr-2" />
-                    <Input
-                      id="code"
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="12345"
-                      className="flex-1"
-                      maxLength={5}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={handleVerifyCode}
-                    disabled={verifyCodeMutation.isPending || !verificationCode.trim()}
-                    className="flex-1"
-                  >
-                    {verifyCodeMutation.isPending ? "Проверка..." : "Подтвердить код"}
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => {
-                      setNeedsCode(false);
-                      setVerificationCode("");
-                    }}
-                  >
-                    Назад
-                  </Button>
-                </div>
-              </>
-            )}
+            <Button 
+              onClick={handleConnect}
+              disabled={connectMutation.isPending || !phoneNumber.trim()}
+              className="w-full"
+            >
+              {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
+            </Button>
           </div>
         )}
+
+        {/* Модальное окно для ввода кода */}
+        <Dialog open={needsCode} onOpenChange={setNeedsCode}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Код подтверждения Telegram</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-blue-800 font-medium">Код отправлен в Telegram</p>
+                <p className="text-sm text-blue-600 mt-1">
+                  Введите код подтверждения, который пришел в Telegram на номер {phoneNumber}
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="verification-code">Код подтверждения</Label>
+                <div className="flex items-center mt-1">
+                  <Key className="w-4 h-4 text-gray-500 mr-2" />
+                  <Input
+                    id="verification-code"
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    placeholder="12345"
+                    className="flex-1"
+                    maxLength={5}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={handleVerifyCode}
+                  disabled={verifyCodeMutation.isPending || !verificationCode.trim()}
+                  className="flex-1"
+                >
+                  {verifyCodeMutation.isPending ? "Проверка..." : "Подтвердить код"}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setNeedsCode(false);
+                    setVerificationCode("");
+                  }}
+                >
+                  Отмена
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="p-4 bg-gray-50 rounded-lg">
           <h4 className="font-medium mb-2 flex items-center">
