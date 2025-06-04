@@ -161,29 +161,29 @@ export class MemStorage implements IStorage {
       {
         title: "Подготовить отчет по продажам",
         description: "Создать презентацию с результатами квартала для встречи с инвесторами",
-        priority: "urgent",
-        status: "new",
-        deadline: new Date(today.getTime() + 24 * 60 * 60 * 1000), // завтра
-        sourceMessageId: "msg_1",
-        sourceChatId: "demo_management"
+        urgency: "high",
+        status: "pending",
+        deadline: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // завтра
+        chatId: "demo_management",
+        messageId: "msg_1"
       },
       {
         title: "Принять решение по скидке ABC Corp",
         description: "Рассмотреть запрос на скидку 15% от крупного клиента",
-        priority: "important",
-        status: "new",
+        urgency: "high",
+        status: "pending",
         deadline: null,
-        sourceMessageId: "msg_2",
-        sourceChatId: "demo_sales"
+        chatId: "demo_sales",
+        messageId: "msg_2"
       },
       {
         title: "Оформить повышение зарплат",
         description: "Подготовить документы для HR по повышению базовой зарплаты на 10%",
-        priority: "normal",
+        urgency: "medium",
         status: "completed",
         deadline: null,
-        sourceMessageId: "msg_3",
-        sourceChatId: "demo_management"
+        chatId: "demo_management",
+        messageId: "msg_3"
       }
     ];
 
@@ -195,35 +195,14 @@ export class MemStorage implements IStorage {
     const todayStr = today.toISOString().split('T')[0];
     const summary = {
       date: todayStr,
+      summary: "Сегодня обработано 3 важных сообщения из 2 чатов. Требуется ваше решение по скидке для ABC Corp. Подготовлен отчет по продажам для инвесторов.",
       requiresResponse: [
-        {
-          chatTitle: "Отдел продаж",
-          chatId: "demo_sales",
-          senderName: "Мария Сидорова",
-          text: "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться?",
-          timestamp: "10:00",
-          messageId: "msg_2"
-        }
+        "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться? (Отдел продаж, 10:00)"
       ],
-      importantDiscussions: [
-        {
-          chatTitle: "Руководство компании",
-          chatId: "demo_management",
-          senderName: "Группа",
-          text: "Подготовка к встрече с инвесторами: Обсуждение презентации отчета по продажам",
-          timestamp: "09:00",
-          messageId: "msg_1"
-        }
-      ],
-      keyDecisions: [
-        {
-          chatTitle: "Руководство компании",
-          chatId: "demo_management",
-          senderName: "Система",
-          text: "Принято решение повысить базовую зарплату на 10% (Обсуждение с HR системы мотивации)",
-          timestamp: "11:00",
-          messageId: "msg_3"
-        }
+      keyTopics: [
+        "Подготовка к встрече с инвесторами - презентация отчета по продажам",
+        "Повышение базовой зарплаты на 10% - решение принято",
+        "Скидка для ABC Corp - требует решения"
       ]
     };
 
