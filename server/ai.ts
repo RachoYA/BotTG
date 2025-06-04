@@ -27,20 +27,39 @@ async function callOpenAI(prompt: string, systemPrompt: string): Promise<string>
   }
 }
 
-// Функция для тестирования модели без JSON форматирования
+// Функция для тестирования модели через новый responses API
 async function testOpenAI(prompt: string): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: "You are a helpful AI assistant. Respond clearly and concisely." },
-        { role: "user", content: prompt }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY not found");
+    }
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1",
+        input: prompt
+      })
     });
 
-    return response.choices[0].message.content || "No response received";
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+    }
+
+    const data = await response.json();
+    
+    // Извлекаем текст из нового формата ответа
+    if (data.output && data.output[0] && data.output[0].content && data.output[0].content[0]) {
+      return data.output[0].content[0].text || "No text content received";
+    }
+    
+    return "Unexpected response format from OpenAI API";
   } catch (error: any) {
     console.error("OpenAI test error:", error);
     throw new Error(`OpenAI API error: ${error.message || 'Unknown error'}`);

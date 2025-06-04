@@ -114,9 +114,15 @@ export default function AIModelTesting() {
           {testModelMutation.data && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <h4 className="font-medium text-green-800 mb-2">Ответ модели:</h4>
-              <p className="text-green-700 whitespace-pre-wrap">
-                {JSON.stringify(testModelMutation.data, null, 2)}
-              </p>
+              <div className="text-green-700">
+                {testModelMutation.data.response ? (
+                  <p className="whitespace-pre-wrap">{testModelMutation.data.response}</p>
+                ) : (
+                  <pre className="text-xs overflow-auto">
+                    {JSON.stringify(testModelMutation.data, null, 2)}
+                  </pre>
+                )}
+              </div>
             </div>
           )}
 
