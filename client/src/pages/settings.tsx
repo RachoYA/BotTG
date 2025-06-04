@@ -1,22 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, MessageCircle, Brain, Database } from "lucide-react";
-import Navigation from "@/components/navigation";
+import Sidebar from "@/components/sidebar";
 import TelegramSetup from "@/components/telegram-setup";
 import LocalAISetup from "@/components/local-ai-setup";
 
 export default function SettingsPage() {
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center">
-          <Settings className="w-8 h-8 mr-3" />
-          Настройки системы
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Управление подключениями и конфигурацией AI-копилота
-        </p>
-      </div>
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                <Settings className="w-6 h-6 mr-3" />
+                Настройки системы
+              </h2>
+              <p className="text-gray-600">Управление подключениями и конфигурацией AI-копилота</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto">
 
       <Tabs defaultValue="telegram" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -85,6 +93,9 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
