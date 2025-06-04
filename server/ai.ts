@@ -1,313 +1,245 @@
+import OpenAI from "openai";
 import { storage } from "./storage";
 import { InsertExtractedTask, InsertDailySummary, InsertAiInsight } from "@shared/schema";
 
-// Локальная LLM настройка (Ollama или аналог)
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || "http://localhost:11434";
-const LOCAL_MODEL = process.env.LOCAL_MODEL || "llama3.2:latest";
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY 
+});
 
-// Функция для запроса к локальной LLM
-async function callLocalLLM(prompt: string, systemPrompt: string): Promise<string> {
+// Функция для запроса к OpenAI
+async function callOpenAI(prompt: string, systemPrompt: string): Promise<string> {
   try {
-    const response = await fetch(`${LOCAL_LLM_URL}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: LOCAL_MODEL,
-        prompt: `${systemPrompt}\n\nUser: ${prompt}`,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-        }
-      })
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 2000,
+      temperature: 0.7,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.response || '';
+    return response.choices[0].message.content || "";
   } catch (error) {
-    console.error('Ошибка при обращении к локальной LLM:', error);
-    // Возвращаем заглушку для демонстрации работы приложения
-    return JSON.stringify({
-      tasks: [
-        {
-          title: "Демо задача",
-          description: "Это демонстрационная задача для показа работы приложения",
-          priority: "normal",
-          deadline: null,
-          sourceMessageText: "демо сообщение"
-        }
-      ]
-    });
+    console.error("Ошибка при обращении к OpenAI:", error);
+    throw error;
   }
 }
 
 export class AIService {
   async processUnreadMessages(): Promise<void> {
-    const unprocessedMessages = await storage.getUnprocessedMessages();
-    
-    if (unprocessedMessages.length === 0) return;
-
-    // Group messages by chat for better context
-    const messagesByChat = unprocessedMessages.reduce((acc, message) => {
-      if (!acc[message.chatId]) acc[message.chatId] = [];
-      acc[message.chatId].push(message);
-      return acc;
-    }, {} as Record<string, typeof unprocessedMessages>);
-
-    for (const [chatId, messages] of Object.entries(messagesByChat)) {
-      await this.extractTasksFromMessages(messages);
+    try {
+      console.log("Начинаем обработку непрочитанных сообщений...");
+      const unprocessedMessages = await storage.getUnprocessedMessages();
       
-      // Mark messages as processed
-      for (const message of messages) {
-        await storage.markMessageAsProcessed(message.id);
+      if (unprocessedMessages.length === 0) {
+        console.log("Нет непрочитанных сообщений для обработки");
+        return;
       }
+
+      console.log(`Обрабатываем ${unprocessedMessages.length} сообщений`);
+      
+      // Группируем сообщения по чатам для более эффективной обработки
+      const messagesByChat = unprocessedMessages.reduce((acc, message) => {
+        if (!acc[message.chatId]) {
+          acc[message.chatId] = [];
+        }
+        acc[message.chatId].push(message);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Обрабатываем каждый чат отдельно
+      for (const [chatId, messages] of Object.entries(messagesByChat)) {
+        await this.extractTasksFromMessages(messages);
+        
+        // Отмечаем сообщения как обработанные
+        for (const message of messages) {
+          await storage.markMessageAsProcessed(message.id);
+        }
+      }
+
+      console.log("Обработка сообщений завершена");
+    } catch (error) {
+      console.error("Ошибка при обработке непрочитанных сообщений:", error);
     }
   }
 
   private async extractTasksFromMessages(messages: any[]): Promise<void> {
-    if (messages.length === 0) return;
+    try {
+      const messagesText = messages.map(m => `[${m.date}] ${m.senderUsername || 'Unknown'}: ${m.message}`).join('\n');
+      
+      const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки. Анализируй сообщения и извлекай задачи, поручения, дедлайны и важную информацию.
 
-    const chatTitle = await this.getChatTitle(messages[0].chatId);
-    const conversationText = messages
-      .map(msg => `[${msg.senderName}]: ${msg.text}`)
-      .join('\n');
-
-    const systemPrompt = `Вы - ИИ-ассистент для руководителя компании. Анализируйте сообщения из корпоративных чатов и извлекайте задачи.
-
-Ответьте в JSON формате со следующей структурой:
+Верни результат в JSON формате:
 {
   "tasks": [
     {
-      "title": "Краткое описание задачи",
-      "description": "Подробное описание с контекстом",
-      "priority": "urgent|important|normal",
-      "deadline": "ISO 8601 дата или null",
-      "sourceMessageText": "Текст сообщения из которого извлечена задача"
+      "title": "краткое название задачи",
+      "description": "подробное описание",
+      "priority": "низкий|средний|высокий|критический",
+      "deadline": "YYYY-MM-DD или null если не указан",
+      "status": "новая",
+      "assignee": "кому поручена задача или null",
+      "source": "краткое описание источника"
     }
   ]
 }
 
-Критерии для извлечения задач:
-- Прямые поручения и просьбы
-- Вопросы, требующие решения руководителя
-- Упоминания дедлайнов или временных рамок
-- Проблемы, требующие вмешательства
-- Запросы на одобрение или подтверждение
+Если задач нет, верни {"tasks": []}`;
 
-Приоритеты:
-- urgent: срочные задачи с дедлайном сегодня/завтра
-- important: важные задачи без срочного дедлайна
-- normal: обычные задачи и напоминания`;
-
-    const userPrompt = `Чат: ${chatTitle}\n\nСообщения:\n${conversationText}`;
-
-    try {
-      const response = await callLocalLLM(userPrompt, systemPrompt);
-      const result = JSON.parse(response);
+      const prompt = `Проанализируй следующие сообщения и извлеки все задачи, поручения и дедлайны:\n\n${messagesText}`;
       
-      for (const taskData of result.tasks || []) {
-        const sourceMessage = messages.find(msg => 
-          (msg.text && msg.text.includes(taskData.sourceMessageText)) || 
-          taskData.sourceMessageText.includes(msg.text || '')
-        );
-
-        const insertTask: InsertExtractedTask = {
-          title: taskData.title,
-          description: taskData.description || '',
-          urgency: taskData.priority || 'medium',
-          status: 'pending',
-          deadline: taskData.deadline || null,
-          chatId: messages[0].chatId,
-          messageId: sourceMessage?.messageId || null,
-        };
-
-        await storage.createExtractedTask(insertTask);
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      
+      if (parsed.tasks && Array.isArray(parsed.tasks)) {
+        for (const task of parsed.tasks) {
+          const insertTask: InsertExtractedTask = {
+            title: task.title,
+            description: task.description,
+            priority: task.priority || 'средний',
+            deadline: task.deadline ? new Date(task.deadline) : null,
+            status: 'новая',
+            assignee: task.assignee,
+            source: task.source,
+            chatId: messages[0]?.chatId || ''
+          };
+          
+          await storage.createExtractedTask(insertTask);
+          console.log(`Создана задача: ${task.title}`);
+        }
       }
     } catch (error) {
-      console.error("Failed to extract tasks from messages:", error);
+      console.error("Ошибка при извлечении задач:", error);
     }
   }
 
   async generateDailySummary(date: string): Promise<void> {
-    const startOfDay = new Date(date);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    try {
+      console.log(`Генерируем ежедневную сводку за ${date}`);
+      
+      // Получаем все сообщения за день
+      const messages = await storage.getTelegramMessages();
+      const dayMessages = messages.filter(m => {
+        const messageDate = new Date(m.date).toISOString().split('T')[0];
+        return messageDate === date;
+      });
 
-    // Get all messages from the day from monitored chats
-    const allMessages = await storage.getTelegramMessages();
-    const dayMessages = allMessages.filter(msg => 
-      msg.timestamp >= startOfDay && msg.timestamp <= endOfDay
-    );
-
-    if (dayMessages.length === 0) {
-      console.log("No messages to summarize for", date);
-      return;
-    }
-
-    // Group messages by chat
-    const messagesByChat = dayMessages.reduce((acc, message) => {
-      if (!acc[message.chatId]) acc[message.chatId] = [];
-      acc[message.chatId].push(message);
-      return acc;
-    }, {} as Record<string, typeof dayMessages>);
-
-    const summaryData = {
-      requiresResponse: [] as any[],
-      importantDiscussions: [] as any[],
-      keyDecisions: [] as any[],
-    };
-
-    for (const [chatId, messages] of Object.entries(messagesByChat)) {
-      const chatTitle = await this.getChatTitle(chatId);
-      const conversationText = messages
-        .map(msg => `[${msg.timestamp.toLocaleTimeString('ru-RU')} ${msg.senderName}]: ${msg.text || ''}`)
-        .join('\n');
-
-      const systemPrompt = `Вы - ИИ-ассистент для руководителя. Анализируйте дневную переписку и категоризируйте сообщения.
-
-Ответьте в JSON формате:
-{
-  "requiresResponse": [
-    {
-      "senderName": "Имя отправителя",
-      "text": "Текст сообщения",
-      "timestamp": "Время в формате HH:MM",
-      "reason": "Почему требует ответа"
-    }
-  ],
-  "importantDiscussions": [
-    {
-      "topic": "Тема обсуждения",
-      "summary": "Краткое изложение",
-      "participants": ["участник1", "участник2"],
-      "timestamp": "Время начала"
-    }
-  ],
-  "keyDecisions": [
-    {
-      "decision": "Принятое решение",
-      "context": "Контекст решения",
-      "timestamp": "Время принятия"
-    }
-  ]
-}
-
-Критерии:
-- requiresResponse: прямые вопросы, просьбы, проблемы требующие решения
-- importantDiscussions: обсуждения стратегии, планов, важных проектов
-- keyDecisions: принятые решения, договоренности, утверждения`;
-
-      const userPrompt = `Чат: ${chatTitle}\n\nПереписка за день:\n${conversationText}`;
-
-      try {
-        const response = await callLocalLLM(userPrompt, systemPrompt);
-        const result = JSON.parse(response);
-
-        // Process requiresResponse
-        for (const item of result.requiresResponse || []) {
-          summaryData.requiresResponse.push({
-            chatTitle,
-            chatId,
-            senderName: item.senderName,
-            text: item.text,
-            timestamp: item.timestamp,
-            messageId: messages.find(msg => (msg.text || '').includes(item.text))?.messageId || '',
-          });
-        }
-
-        // Process importantDiscussions
-        for (const item of result.importantDiscussions || []) {
-          summaryData.importantDiscussions.push({
-            chatTitle,
-            chatId,
-            senderName: 'Группа',
-            text: `${item.topic}: ${item.summary}`,
-            timestamp: item.timestamp,
-            messageId: '',
-          });
-        }
-
-        // Process keyDecisions
-        for (const item of result.keyDecisions || []) {
-          summaryData.keyDecisions.push({
-            chatTitle,
-            chatId,
-            senderName: 'Система',
-            text: `${item.decision} (${item.context})`,
-            timestamp: item.timestamp,
-            messageId: '',
-          });
-        }
-      } catch (error) {
-        console.error(`Failed to analyze chat ${chatTitle}:`, error);
+      if (dayMessages.length === 0) {
+        console.log("Нет сообщений за указанный день");
+        return;
       }
+
+      // Получаем задачи за день
+      const tasks = await storage.getExtractedTasks();
+      const dayTasks = tasks.filter(t => {
+        const taskDate = new Date(t.createdAt).toISOString().split('T')[0];
+        return taskDate === date;
+      });
+
+      const systemPrompt = `Ты - AI-ассистент для создания ежедневных сводок для руководителя. Создай краткую сводку дня, выделив:
+1. Ключевые события и обсуждения
+2. Новые задачи и поручения
+3. Важные решения
+4. Вопросы, требующие внимания руководителя
+5. Сроки и дедлайны
+
+Верни результат в JSON формате:
+{
+  "summary": "краткая сводка дня",
+  "keyPoints": ["пункт 1", "пункт 2", ...],
+  "actionRequired": ["что требует внимания 1", "что требует внимания 2", ...],
+  "upcomingDeadlines": ["дедлайн 1", "дедлайн 2", ...]
+}`;
+
+      const messagesText = dayMessages.map(m => `[${m.date}] ${m.senderUsername}: ${m.message}`).join('\n');
+      const tasksText = dayTasks.map(t => `Задача: ${t.title} (${t.priority})`).join('\n');
+      
+      const prompt = `Создай ежедневную сводку на основе:\n\nСООБЩЕНИЯ:\n${messagesText}\n\nЗАДАЧИ:\n${tasksText}`;
+      
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+
+      const insertSummary: InsertDailySummary = {
+        date: new Date(date),
+        summary: parsed.summary,
+        keyPoints: parsed.keyPoints || [],
+        actionRequired: parsed.actionRequired || [],
+        upcomingDeadlines: parsed.upcomingDeadlines || [],
+        messageCount: dayMessages.length,
+        taskCount: dayTasks.length
+      };
+
+      await storage.createDailySummary(insertSummary);
+      console.log(`Ежедневная сводка за ${date} создана`);
+    } catch (error) {
+      console.error("Ошибка при генерации ежедневной сводки:", error);
     }
-
-    // Save the summary
-    const insertSummary: InsertDailySummary = {
-      date,
-      requiresResponse: summaryData.requiresResponse,
-      importantDiscussions: summaryData.importantDiscussions,
-      keyDecisions: summaryData.keyDecisions,
-    };
-
-    await storage.createDailySummary(insertSummary);
   }
 
   async generateAIInsights(): Promise<void> {
-    const stats = await storage.getDashboardStats();
-    const recentTasks = await storage.getExtractedTasks();
-    const urgentTasks = await storage.getUrgentTasks();
+    try {
+      console.log("Генерируем AI-инсайты...");
+      
+      // Получаем данные для анализа
+      const tasks = await storage.getExtractedTasks();
+      const recentTasks = tasks.slice(-20); // последние 20 задач
+      
+      if (recentTasks.length === 0) {
+        console.log("Недостаточно данных для генерации инсайтов");
+        return;
+      }
 
-    const insights: InsertAiInsight[] = [];
+      const systemPrompt = `Ты - AI-аналитик для руководителя. Проанализируй задачи и создай полезные инсайты и рекомендации.
 
-    // Priority insight
-    if (urgentTasks.length > 0) {
-      insights.push({
-        type: 'priority',
-        title: 'Совет по приоритизации',
-        description: `У вас ${urgentTasks.length} срочных задач. Рекомендуется сначала ответить на самые критичные сообщения.`,
-        icon: 'fas fa-lightbulb',
-        color: 'primary',
-      });
+Верни результат в JSON формате:
+{
+  "insights": [
+    {
+      "type": "trend|warning|recommendation|observation",
+      "title": "заголовок инсайта",
+      "description": "подробное описание",
+      "actionItems": ["рекомендуемое действие 1", "рекомендуемое действие 2"]
     }
+  ]
+}`;
 
-    // Time management insight
-    if (stats.unreadMessages > 10) {
-      insights.push({
-        type: 'time_management',
-        title: 'Управление временем',
-        description: `${stats.unreadMessages} непрочитанных сообщений. Выделите время для обработки коммуникаций.`,
-        icon: 'fas fa-clock',
-        color: 'accent',
-      });
-    }
-
-    // Productivity insight
-    if (stats.completedTasksPercentage > 80) {
-      insights.push({
-        type: 'productivity',
-        title: 'Продуктивность',
-        description: `Отличный результат! Выполнено ${stats.completedTasksPercentage}% задач за период.`,
-        icon: 'fas fa-chart-line',
-        color: 'success',
-      });
-    }
-
-    for (const insight of insights) {
-      await storage.createAiInsight(insight);
+      const tasksText = recentTasks.map(t => 
+        `Задача: ${t.title}, Приоритет: ${t.priority}, Статус: ${t.status}, Создана: ${t.createdAt}`
+      ).join('\n');
+      
+      const prompt = `Проанализируй следующие задачи и дай инсайты:\n\n${tasksText}`;
+      
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      
+      if (parsed.insights && Array.isArray(parsed.insights)) {
+        for (const insight of parsed.insights) {
+          const insertInsight: InsertAiInsight = {
+            type: insight.type,
+            title: insight.title,
+            description: insight.description,
+            actionItems: insight.actionItems || [],
+            priority: insight.type === 'warning' ? 'высокий' : 'средний'
+          };
+          
+          await storage.createAiInsight(insertInsight);
+          console.log(`Создан инсайт: ${insight.title}`);
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при генерации AI-инсайтов:", error);
     }
   }
 
   private async getChatTitle(chatId: string): Promise<string> {
-    const chat = await storage.getTelegramChatByChatId(chatId);
-    return chat?.title || 'Неизвестный чат';
+    try {
+      const chat = await storage.getTelegramChatByChatId(chatId);
+      return chat?.title || `Chat ${chatId}`;
+    } catch (error) {
+      return `Chat ${chatId}`;
+    }
   }
 }
 
