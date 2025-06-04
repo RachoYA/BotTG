@@ -22,31 +22,33 @@ export class TelegramService {
     this.apiHash = process.env.TELEGRAM_API_HASH || "3a5e530327b9e7e8e90b54c6ab0259a1";
     this.phoneNumber = process.env.TELEGRAM_PHONE_NUMBER || "";
     
-    // Загружаем сессию из файла или переменной окружения
+    // Загружаем сессию из переменной окружения или файла
     let sessionString = process.env.TELEGRAM_SESSION_STRING || "";
     
-    // Пытаемся загрузить из файла если переменная пустая
+    // Если в переменной окружения нет сессии, пытаемся загрузить из файла
     if (!sessionString) {
       try {
         const sessionPath = path.join(process.cwd(), '.telegram_session');
         if (fs.existsSync(sessionPath)) {
           sessionString = fs.readFileSync(sessionPath, 'utf8').trim();
-          console.log("Loaded session string from file:", sessionString.substring(0, 20) + "...");
+          console.log("Loaded session from file");
         }
       } catch (e) {
-        console.log("No session file found");
+        console.log("No session file found, will need manual auth");
       }
+    } else {
+      console.log("Using session from environment variable");
     }
     
     try {
       this.session = new StringSession(sessionString);
-      if (sessionString) {
-        console.log("Using existing session string");
+      if (sessionString && sessionString.length > 100) {
+        console.log("Valid session string loaded, length:", sessionString.length);
       } else {
-        console.log("Creating empty session");
+        console.log("Creating empty session - no valid session found");
       }
     } catch (e) {
-      console.log("Invalid session string, creating empty session");
+      console.log("Invalid session string format, creating empty session");
       this.session = new StringSession("");
     }
     
@@ -56,7 +58,14 @@ export class TelegramService {
 
     // Автоматически подключаемся при запуске если есть валидная сессия
     if (sessionString && sessionString.length > 10) {
-      this.autoConnect();
+      console.log("Valid session found, attempting auto-connect...");
+      setTimeout(() => {
+        this.autoConnect().catch(err => {
+          console.log("Auto-connect failed:", err.message);
+        });
+      }, 1000);
+    } else {
+      console.log("No valid session, manual authentication required");
     }
   }
 
