@@ -81,6 +81,173 @@ export class MemStorage implements IStorage {
     this.dailySummaries = new Map();
     this.aiInsights = new Map();
     this.currentId = 1;
+    
+    // Добавляем демо-данные для демонстрации
+    this.initDemoData();
+  }
+
+  private async initDemoData() {
+    // Создаем демо-чаты
+    const demoChats = [
+      {
+        chatId: "demo_management",
+        title: "Руководство компании",
+        type: "group",
+        isMonitored: true,
+        participantCount: 5
+      },
+      {
+        chatId: "demo_sales",
+        title: "Отдел продаж",
+        type: "group",
+        isMonitored: true,
+        participantCount: 8
+      },
+      {
+        chatId: "demo_development",
+        title: "Команда разработки",
+        type: "group",
+        isMonitored: false,
+        participantCount: 12
+      }
+    ];
+
+    for (const chat of demoChats) {
+      await this.createTelegramChat(chat);
+    }
+
+    // Создаем демо-сообщения
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const demoMessages = [
+      {
+        messageId: "msg_1",
+        chatId: "demo_management",
+        senderId: "user_1",
+        senderName: "Иван Петров",
+        text: "Нужно срочно подготовить отчет по продажам к завтрашней встрече с инвесторами",
+        timestamp: new Date(today.getTime() + 9 * 60 * 60 * 1000), // 9:00
+        isProcessed: false
+      },
+      {
+        messageId: "msg_2",
+        chatId: "demo_sales",
+        senderId: "user_2",
+        senderName: "Мария Сидорова",
+        text: "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться?",
+        timestamp: new Date(today.getTime() + 10 * 60 * 60 * 1000), // 10:00
+        isProcessed: false
+      },
+      {
+        messageId: "msg_3",
+        chatId: "demo_management",
+        senderId: "user_3",
+        senderName: "Александр Козлов",
+        text: "Обсудили с HR новую систему мотивации. Принято решение повысить базовую зарплату на 10%",
+        timestamp: new Date(today.getTime() + 11 * 60 * 60 * 1000), // 11:00
+        isProcessed: false
+      }
+    ];
+
+    for (const message of demoMessages) {
+      await this.createTelegramMessage(message);
+    }
+
+    // Создаем демо-задачи
+    const demoTasks = [
+      {
+        title: "Подготовить отчет по продажам",
+        description: "Создать презентацию с результатами квартала для встречи с инвесторами",
+        priority: "urgent",
+        status: "new",
+        deadline: new Date(today.getTime() + 24 * 60 * 60 * 1000), // завтра
+        sourceMessageId: "msg_1",
+        sourceChatId: "demo_management"
+      },
+      {
+        title: "Принять решение по скидке ABC Corp",
+        description: "Рассмотреть запрос на скидку 15% от крупного клиента",
+        priority: "important",
+        status: "new",
+        deadline: null,
+        sourceMessageId: "msg_2",
+        sourceChatId: "demo_sales"
+      },
+      {
+        title: "Оформить повышение зарплат",
+        description: "Подготовить документы для HR по повышению базовой зарплаты на 10%",
+        priority: "normal",
+        status: "completed",
+        deadline: null,
+        sourceMessageId: "msg_3",
+        sourceChatId: "demo_management"
+      }
+    ];
+
+    for (const task of demoTasks) {
+      await this.createExtractedTask(task);
+    }
+
+    // Создаем ежедневную сводку
+    const todayStr = today.toISOString().split('T')[0];
+    const summary = {
+      date: todayStr,
+      requiresResponse: [
+        {
+          chatTitle: "Отдел продаж",
+          chatId: "demo_sales",
+          senderName: "Мария Сидорова",
+          text: "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться?",
+          timestamp: "10:00",
+          messageId: "msg_2"
+        }
+      ],
+      importantDiscussions: [
+        {
+          chatTitle: "Руководство компании",
+          chatId: "demo_management",
+          senderName: "Группа",
+          text: "Подготовка к встрече с инвесторами: Обсуждение презентации отчета по продажам",
+          timestamp: "09:00",
+          messageId: "msg_1"
+        }
+      ],
+      keyDecisions: [
+        {
+          chatTitle: "Руководство компании",
+          chatId: "demo_management",
+          senderName: "Система",
+          text: "Принято решение повысить базовую зарплату на 10% (Обсуждение с HR системы мотивации)",
+          timestamp: "11:00",
+          messageId: "msg_3"
+        }
+      ]
+    };
+
+    await this.createDailySummary(summary);
+
+    // Создаем AI инсайты
+    const insights = [
+      {
+        type: 'priority',
+        title: 'Совет по приоритизации',
+        description: 'У вас 1 срочная задача. Рекомендуется сначала ответить на запрос по отчету.',
+        icon: 'fas fa-lightbulb',
+        color: 'primary'
+      },
+      {
+        type: 'time_management',
+        title: 'Управление временем',
+        description: 'Есть непрочитанные сообщения, требующие вашего внимания.',
+        icon: 'fas fa-clock',
+        color: 'accent'
+      }
+    ];
+
+    for (const insight of insights) {
+      await this.createAiInsight(insight);
+    }
   }
 
   // Users
@@ -119,6 +286,8 @@ export class MemStorage implements IStorage {
     const chat: TelegramChat = {
       ...insertChat,
       id,
+      isMonitored: insertChat.isMonitored ?? false,
+      participantCount: insertChat.participantCount ?? 0,
       createdAt: new Date(),
     };
     this.telegramChats.set(id, chat);
@@ -160,6 +329,10 @@ export class MemStorage implements IStorage {
     const message: TelegramMessage = {
       ...insertMessage,
       id,
+      senderId: insertMessage.senderId ?? null,
+      senderName: insertMessage.senderName ?? null,
+      text: insertMessage.text ?? null,
+      isProcessed: insertMessage.isProcessed ?? false,
       createdAt: new Date(),
     };
     this.telegramMessages.set(id, message);
@@ -195,6 +368,11 @@ export class MemStorage implements IStorage {
     const task: ExtractedTask = {
       ...insertTask,
       id,
+      status: insertTask.status ?? 'new',
+      description: insertTask.description ?? null,
+      deadline: insertTask.deadline ?? null,
+      sourceMessageId: insertTask.sourceMessageId ?? null,
+      sourceChatId: insertTask.sourceChatId ?? null,
       extractedAt: new Date(),
       completedAt: null,
     };
@@ -230,6 +408,9 @@ export class MemStorage implements IStorage {
     const summary: DailySummary = {
       ...insertSummary,
       id,
+      requiresResponse: insertSummary.requiresResponse ?? [],
+      importantDiscussions: insertSummary.importantDiscussions ?? [],
+      keyDecisions: insertSummary.keyDecisions ?? [],
       createdAt: new Date(),
     };
     this.dailySummaries.set(id, summary);
