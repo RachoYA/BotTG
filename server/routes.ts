@@ -289,6 +289,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test AI Model
+  app.post("/api/ai/test", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const { aiService } = await import("./ai");
+      const response = await aiService.testModel(prompt);
+      
+      res.json({ 
+        success: true, 
+        response,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("AI test error:", error);
+      res.status(500).json({ 
+        error: "AI model test failed", 
+        details: error.message 
+      });
+    }
+  });
+
+  // Generate AI Insights manually
+  app.post("/api/ai/generate-insights", async (req, res) => {
+    try {
+      const { aiService } = await import("./ai");
+      await aiService.generateAIInsights();
+      
+      res.json({ 
+        success: true, 
+        message: "AI insights generated successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("AI insights generation error:", error);
+      res.status(500).json({ 
+        error: "Failed to generate AI insights", 
+        details: error.message 
+      });
+    }
+  });
+
+  // Database Statistics
+  app.get("/api/database/stats", async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      const chats = await storage.getTelegramChats();
+      const messages = await storage.getTelegramMessages();
+      const tasks = await storage.getExtractedTasks();
+      const insights = await storage.getAiInsights();
+      
+      res.json({
+        users: 1, // Current user count
+        chats: chats.length,
+        messages: messages.length,
+        tasks: tasks.length,
+        insights: insights.length,
+        ...stats
+      });
+    } catch (error) {
+      console.error("Database stats error:", error);
+      res.status(500).json({ error: "Failed to get database statistics" });
+    }
+  });
+
   // Cleanup on shutdown
   process.on('SIGTERM', () => {
     console.log('Shutting down services...');

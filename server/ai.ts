@@ -28,6 +28,16 @@ async function callOpenAI(prompt: string, systemPrompt: string): Promise<string>
 }
 
 export class AIService {
+  async testModel(prompt: string): Promise<string> {
+    try {
+      const response = await callOpenAI(prompt, "You are a helpful AI assistant. Respond clearly and concisely.");
+      return response;
+    } catch (error) {
+      console.error("AI model test failed:", error);
+      throw new Error(`AI model test failed: ${error.message}`);
+    }
+  }
+
   async processUnreadMessages(): Promise<void> {
     try {
       console.log("Начинаем обработку непрочитанных сообщений...");

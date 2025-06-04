@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, MessageCircle, Brain, Database } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import TelegramSetup from "@/components/telegram-setup";
-import LocalAISetup from "@/components/local-ai-setup";
+import AIModelTesting from "@/components/ai-model-testing";
+import DatabaseManagement from "@/components/database-management";
 
 export default function SettingsPage() {
   return (
