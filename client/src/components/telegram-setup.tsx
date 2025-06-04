@@ -26,7 +26,7 @@ export default function TelegramSetup() {
     mutationFn: async (phoneNumber: string) => {
       return await apiRequest('POST', '/api/telegram/connect', { phoneNumber });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
       if (data?.needsCode) {
         setNeedsCode(true);

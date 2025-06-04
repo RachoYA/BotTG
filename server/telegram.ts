@@ -12,6 +12,7 @@ export class TelegramService {
   private phoneNumber: string = "";
   private authFlow: any = null;
   private currentCode: string = "";
+  private phoneCodeHash: string = "";
   private authState: 'none' | 'phone_sent' | 'code_needed' | 'connected' = 'none';
 
   constructor() {
@@ -48,15 +49,16 @@ export class TelegramService {
       } else {
         console.log("Session invalid, starting auth flow...");
         // Начинаем процесс авторизации
-        await this.client.sendCode(
+        const result = await this.client.sendCode(
           {
             apiId: this.apiId,
             apiHash: this.apiHash,
           },
           this.phoneNumber
         );
+        this.phoneCodeHash = result.phoneCodeHash;
         this.authState = 'code_needed';
-        console.log("Code sent to phone number");
+        console.log("Code sent to phone number, hash:", this.phoneCodeHash);
         return { needsCode: true };
       }
     } catch (error) {
@@ -69,45 +71,36 @@ export class TelegramService {
 
   async verifyCode(code: string): Promise<void> {
     try {
-      console.log("Verifying code:", code);
+      console.log("Verifying code:", code, "with hash:", this.phoneCodeHash);
       
       if (!this.client.connected) {
         await this.client.connect();
       }
 
-      // Use the client.start method with proper authentication flow
-      await this.client.start({
-        phoneNumber: async () => {
-          console.log("Phone number requested:", this.phoneNumber);
-          return this.phoneNumber;
-        },
-        password: async () => {
-          console.log("Password requested");
-          return process.env.TELEGRAM_PASSWORD || "";
-        },
-        phoneCode: async () => {
-          console.log("Code requested, providing:", code);
-          return code;
-        },
-        onError: (err) => {
-          console.log("Telegram auth error:", err);
-        },
-      });
+      // Используем правильный API метод для авторизации
+      const result = await this.client.invoke(
+        new Api.auth.SignIn({
+          phoneNumber: this.phoneNumber,
+          phoneCodeHash: this.phoneCodeHash,
+          phoneCode: code,
+        })
+      );
 
-      // Check if we're now authorized
-      if (await this.client.checkAuthorization()) {
+      console.log("Auth result:", result.className);
+
+      if (result.className === "auth.Authorization") {
         this.isConnected = true;
         this.authState = 'connected';
         console.log("Successfully authenticated with Telegram");
         
         // Save the session string for future use
         const sessionString = this.client.session.save();
-        console.log("New session string saved:", sessionString);
+        console.log("New session string saved");
         
         // Load dialogs after successful authentication
         await this.loadDialogs();
       } else {
-        throw new Error("Authentication failed");
+        throw new Error("Unexpected authentication result: " + result.className);
       }
     } catch (error: any) {
       console.error("Failed to verify code:", error);
