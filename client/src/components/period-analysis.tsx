@@ -40,6 +40,12 @@ export default function PeriodAnalysis() {
         description: "Контекстный анализ переписки выполнен успешно"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/period-analysis/recent"] });
+      
+      // Сбрасываем форму
+      setStartDate("");
+      setEndDate("");
+      setSelectedChatId("");
     },
     onError: (error: any) => {
       toast({

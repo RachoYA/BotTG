@@ -12,9 +12,9 @@ export default function AnalysisPage() {
   const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
 
   // Get recent analyses
-  const { data: analyses = [] } = useQuery({
-    queryKey: ["/api/period-analysis"],
-    queryFn: () => fetch("/api/period-analysis").then(res => res.json())
+  const { data: analyses = [], refetch } = useQuery({
+    queryKey: ["/api/period-analysis/recent"],
+    refetchInterval: 5000, // Автообновление каждые 5 секунд
   });
 
   const getPriorityColor = (priority: string) => {
