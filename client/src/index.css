@@ -2,6 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-first responsive design */
+@layer base {
+  html {
+    font-size: 14px;
+  }
+  
+  @media (min-width: 1024px) {
+    html {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer components {
+  /* Mobile card adaptations */
+  .mobile-card {
+    @apply p-3 lg:p-6;
+  }
+  
+  .mobile-text-sm {
+    @apply text-xs lg:text-sm;
+  }
+  
+  .mobile-text-base {
+    @apply text-sm lg:text-base;
+  }
+  
+  .mobile-text-lg {
+    @apply text-base lg:text-lg;
+  }
+  
+  .mobile-text-xl {
+    @apply text-lg lg:text-xl;
+  }
+  
+  .mobile-text-2xl {
+    @apply text-xl lg:text-2xl;
+  }
+  
+  .mobile-text-3xl {
+    @apply text-2xl lg:text-3xl;
+  }
+  
+  /* Mobile spacing */
+  .mobile-gap {
+    @apply gap-3 lg:gap-6;
+  }
+  
+  .mobile-p {
+    @apply p-3 lg:p-6;
+  }
+  
+  .mobile-px {
+    @apply px-3 lg:px-6;
+  }
+  
+  .mobile-py {
+    @apply py-3 lg:py-6;
+  }
+  
+  /* Mobile grid layouts */
+  .mobile-grid-2 {
+    @apply grid-cols-2 lg:grid-cols-4;
+  }
+  
+  .mobile-grid-1 {
+    @apply grid-cols-1 lg:grid-cols-2;
+  }
+  
+  /* Mobile table responsive */
+  .mobile-table {
+    @apply overflow-x-auto;
+  }
+  
+  .mobile-table table {
+    @apply min-w-full;
+  }
+  
+  /* Mobile button sizes */
+  .mobile-btn {
+    @apply text-xs lg:text-sm px-2 lg:px-4 py-1 lg:py-2;
+  }
+  
+  /* Mobile form inputs */
+  .mobile-input {
+    @apply text-sm lg:text-base px-2 lg:px-3 py-1 lg:py-2;
+  }
+}
+
 :root {
   --background: 210 11% 98%; /* #F5F7FA */
   --foreground: 220 14% 4%; /* #0A0E14 */

@@ -67,7 +67,7 @@ export default function Dashboard() {
           </div>
 
           {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-4 lg:mb-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
