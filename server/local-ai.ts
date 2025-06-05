@@ -253,33 +253,40 @@ Respond with JSON containing:
 
   // Business conversation analysis for management insights
   async analyzeBusinessConversation(messages: any[], chatTitle: string): Promise<any> {
+    // Take more messages for comprehensive analysis, but limit for token constraints
+    const messageLimit = Math.min(messages.length, 200);
     const conversationText = messages
-      .slice(-50) // Last 50 messages for context
+      .slice(-messageLimit) // Take up to 200 most recent messages
       .map(msg => `[${msg.timestamp?.toISOString()?.slice(0, 19) || 'Unknown'}] ${msg.senderName || 'Unknown'}: ${msg.text || ''}`)
       .join('\n');
 
-    const systemPrompt = `You are a business communication analyst. Analyze this conversation for management insights.
+    const systemPrompt = `Ты - эксперт по анализу деловых коммуникаций. Проанализируй ${messageLimit} сообщений переписки для управленческих инсайтов.
 
-IMPORTANT: The user in the system is called "Грачья" (may also appear as "Грачья Алексаня" or "Racho"). Focus on communications directed to this person.
+ВАЖНО: Пользователь в системе - "Грачья" (может быть "Грачья Алексаня", "Racho", "Racho23"). Сосредоточься на коммуникациях с этим человеком.
 
-Analyze for:
-1. Unanswered requests to Грачья
-2. Identified problems requiring attention
-3. Open questions needing responses
-4. Грачья's participation level
-5. Missed responses from Грачья
-6. Overall priority level
+Детально проанализируй:
+1. Неотвеченные запросы к Грачье - конкретные просьбы и задачи
+2. Выявленные проблемы - технические, финансовые, организационные
+3. Открытые вопросы - что требует решения или ответа
+4. Участие Грачьи - как он взаимодействует в переписке
+5. Пропущенные ответы - на что не отвечено
+6. Бизнес-контекст - проекты, финансы, команда
+7. Технические аспекты - разработка, инструменты, проблемы
+8. Приоритеты - что срочно, что может подождать
 
-Respond with JSON containing these fields:
+Отвечай ТОЛЬКО JSON без дополнительного текста:
 {
-  "unansweredRequests": ["request1", "request2"],
-  "identifiedProblems": ["problem1", "problem2"],
-  "openQuestions": ["question1", "question2"],
-  "myParticipation": "description of Грачья's involvement",
-  "missedResponses": ["missed1", "missed2"],
+  "unansweredRequests": ["детальное описание запроса с контекстом"],
+  "identifiedProblems": ["конкретная проблема с объяснением"],
+  "openQuestions": ["открытый вопрос, требующий решения"],
+  "myParticipation": "подробное описание роли и участия Грачьи",
+  "missedResponses": ["на что конкретно не ответил"],
   "responseRequired": true/false,
-  "summary": "overall conversation summary",
-  "priority": "low/medium/high"
+  "summary": "детальное резюме ключевых моментов переписки",
+  "priority": "high/medium/low",
+  "businessTopics": ["конкретные бизнес-темы"],
+  "technicalTopics": ["технические вопросы"],
+  "financialTopics": ["финансовые аспекты"]
 }`;
 
     try {
