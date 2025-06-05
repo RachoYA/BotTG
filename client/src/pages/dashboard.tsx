@@ -3,6 +3,7 @@ import PeriodAnalysis from "@/components/period-analysis";
 import DailySummary from "@/components/daily-summary";
 import AIInsights from "@/components/ai-insights";
 import RussianLLMManagement from "@/components/russian-llm-management";
+import ModelStatus from "@/components/model-status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -248,6 +249,9 @@ export default function Dashboard() {
                   <PeriodAnalysis />
                 </CardContent>
               </Card>
+
+              {/* Model Status */}
+              <ModelStatus />
 
               {/* AI Insights Preview */}
               <Card>
