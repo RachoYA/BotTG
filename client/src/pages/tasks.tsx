@@ -89,6 +89,20 @@ export default function TasksPage() {
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/tasks/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      toast({
+        title: "Задача удалена",
+        description: "Задача успешно удалена из системы",
+      });
+    },
+  });
+
   const getUrgencyIcon = (urgency: string) => {
     switch (urgency) {
       case 'high': return <AlertTriangle className="h-4 w-4 text-red-500" />;
@@ -127,10 +141,6 @@ export default function TasksPage() {
     );
   }
 
-  const pendingTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'pending') : [];
-  const inProgressTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'in_progress') : [];
-  const completedTasks = Array.isArray(tasks) ? tasks.filter((t: any) => t.status === 'completed') : [];
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
@@ -139,113 +149,53 @@ export default function TasksPage() {
         <header className="bg-white shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Управление задачами</h2>
-              <p className="text-gray-600">Задачи, извлеченные из Telegram переписки</p>
+              <h2 className="text-2xl font-bold text-gray-900">Задачи</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Извлеченные задачи из Telegram сообщений
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">
+                {Array.isArray(tasks) ? tasks.length : 0} задач
+              </Badge>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="grid gap-6">
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="flex items-center p-6">
-                  <Clock className="h-8 w-8 text-blue-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Ожидают</p>
-                    <p className="text-2xl font-bold">{pendingTasks.length}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="flex items-center p-6">
-                  <AlertTriangle className="h-8 w-8 text-yellow-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">В работе</p>
-                    <p className="text-2xl font-bold">{inProgressTasks.length}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="flex items-center p-6">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Завершено</p>
-                    <p className="text-2xl font-bold">{completedTasks.length}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="flex items-center p-6">
-                  <Calendar className="h-8 w-8 text-purple-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Всего</p>
-                    <p className="text-2xl font-bold">{tasks?.length || 0}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tasks List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Список задач</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {tasks?.map((task: any) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="flex items-center space-x-2">
-                          {getUrgencyIcon(task.urgency)}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{task.title}</h3>
+        <main className="flex-1 overflow-auto p-6">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Задача</TableHead>
+                    <TableHead>Приоритет</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Источник</TableHead>
+                    <TableHead>Дедлайн</TableHead>
+                    <TableHead>Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(tasks) && tasks.map((task: any) => (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <div className="font-medium">{task.title}</div>
                           {task.description && (
-                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                            <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {task.description}
+                            </div>
                           )}
-                          <div className="flex items-center space-x-2 text-sm text-gray-500 mt-2">
-                            <span>Приоритет: {getUrgencyLabel(task.urgency)}</span>
-                            {task.deadline && (
-                              <>
-                                <span>•</span>
-                                <span>Дедлайн: {new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
-                              </>
-                            )}
-                            {task.chatId && (
-                              <>
-                                <span>•</span>
-                                <span className="text-gray-500">Источник:</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto p-1 text-blue-600 hover:text-blue-800"
-                                  onClick={() => setSelectedChatId(task.chatId)}
-                                >
-                                  <MessageSquare className="h-3 w-3 mr-1" />
-                                  Чат {task.chatId}
-                                </Button>
-                              </>
-                            )}
-                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <Badge 
-                          variant={
-                            task.status === 'completed' ? 'default' : 
-                            task.status === 'in_progress' ? 'secondary' : 
-                            'outline'
-                          }
-                        >
-                          {getStatusLabel(task.status)}
-                        </Badge>
-                        
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {getUrgencyIcon(task.urgency)}
+                          <span className="ml-2">{getUrgencyLabel(task.urgency)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Select
                           value={task.status}
                           onValueChange={(status) => 
@@ -262,32 +212,73 @@ export default function TasksPage() {
                             <SelectItem value="completed">Завершено</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
-                    </div>
+                      </TableCell>
+                      <TableCell>
+                        {task.chatId && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto text-blue-600"
+                            onClick={() => setSelectedChatId(task.chatId)}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Чат
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {task.deadline ? (
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {new Date(task.deadline).toLocaleDateString('ru-RU')}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateTaskMutation.mutate({ id: task.id, status: 'completed' })}
+                            disabled={updateTaskMutation.isPending || task.status === 'completed'}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteTaskMutation.mutate(task.id)}
+                            disabled={deleteTaskMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                  
-                  {(!tasks || tasks.length === 0) && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>Нет задач</p>
-                      <p className="text-sm">Задачи будут автоматически извлечены из Telegram сообщений</p>
-                    </div>
-                  )}
+                </TableBody>
+              </Table>
+              
+              {(!tasks || tasks.length === 0) && (
+                <div className="text-center py-12 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Нет задач</p>
+                  <p className="text-sm">Задачи будут автоматически извлечены из Telegram сообщений</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </main>
       </div>
-      
+
       {/* Модальное окно для просмотра чата */}
-      {selectedChatId && (
-        <ChatModal
-          chatId={selectedChatId}
-          isOpen={!!selectedChatId}
-          onClose={() => setSelectedChatId(null)}
-        />
-      )}
+      <ChatModal 
+        chatId={selectedChatId || ""} 
+        isOpen={!!selectedChatId} 
+        onClose={() => setSelectedChatId(null)} 
+      />
     </div>
   );
 }

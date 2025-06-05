@@ -95,6 +95,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update task status
+  app.patch("/api/tasks/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const task = await storage.updateTaskStatus(parseInt(id), status);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  // Delete task
+  app.delete("/api/tasks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteTask(parseInt(id));
+      res.json({ success: true, message: "Task deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
   // Get monitored chats
   app.get("/api/chats", async (req, res) => {
     try {

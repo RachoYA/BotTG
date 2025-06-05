@@ -588,6 +588,10 @@ export class DatabaseStorage implements IStorage {
     return task || undefined;
   }
 
+  async deleteTask(id: number): Promise<void> {
+    await db.delete(extractedTasks).where(eq(extractedTasks.id, id));
+  }
+
   // Daily Summaries
   async getDailySummary(date: string): Promise<DailySummary | undefined> {
     const [summary] = await db.select().from(dailySummaries)
