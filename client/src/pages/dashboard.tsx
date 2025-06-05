@@ -2,6 +2,7 @@ import MobileSidebar from "@/components/mobile-sidebar";
 import PeriodAnalysis from "@/components/period-analysis";
 import DailySummary from "@/components/daily-summary";
 import AIInsights from "@/components/ai-insights";
+import RussianLLMManagement from "@/components/russian-llm-management";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

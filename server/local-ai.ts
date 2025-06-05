@@ -20,7 +20,7 @@ const defaultConfig: LocalAIConfig = {
 class LocalAIService {
   private client: OpenAI;
   private config: LocalAIConfig;
-  private fallbackToOpenAI: boolean = true;
+  private fallbackToOpenAI: boolean = false;
   private openaiClient?: OpenAI;
 
   constructor(config: Partial<LocalAIConfig> = {}) {

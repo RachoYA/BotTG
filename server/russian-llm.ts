@@ -25,6 +25,11 @@ export class RussianLLMService {
   }
 
   async initialize(): Promise<void> {
+    if (this.isRunning) {
+      console.log('Russian LLM service already running');
+      return;
+    }
+    
     console.log('Initializing Russian LLM service...');
     
     // Create HTTP server that provides OpenAI-compatible API
