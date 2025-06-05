@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { telegramService } from "./telegram";
-import { ragService } from "./rag";
+import { ragService } from "./rag-db";
 import {
   type InsertPeriodAnalysis,
   type InsertDailySummary,

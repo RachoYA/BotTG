@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Query is required" });
       }
 
-      const { ragService } = await import("./rag");
+      const { ragService } = await import("./rag-db");
       const results = await ragService.semanticSearch(query, chatIds, limit);
       
       res.json(results);
