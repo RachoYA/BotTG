@@ -75,6 +75,26 @@ export default function ChatsPage() {
     },
   });
 
+  const loadAllMessagesMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/telegram/load-all-messages`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      toast({
+        title: "Сообщения загружены",
+        description: `${data.message}. Загружено из ${data.loadedChats}/${data.totalChats} чатов`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка загрузки",
+        description: error.message || "Не удалось загрузить сообщения из всех чатов",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex h-screen">
@@ -106,6 +126,15 @@ export default function ChatsPage() {
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${reloadDialogsMutation.isPending ? 'animate-spin' : ''}`} />
                 Обновить чаты
+              </Button>
+              <Button
+                onClick={() => loadAllMessagesMutation.mutate()}
+                disabled={loadAllMessagesMutation.isPending || !telegramStatus?.connected}
+                variant="default"
+                size="sm"
+              >
+                <Download className={`h-4 w-4 mr-2 ${loadAllMessagesMutation.isPending ? 'animate-spin' : ''}`} />
+                {loadAllMessagesMutation.isPending ? 'Загружаем...' : 'Загрузить все сообщения'}
               </Button>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-success rounded-full"></div>

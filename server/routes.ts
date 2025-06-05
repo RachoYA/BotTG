@@ -250,6 +250,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Load messages from all chats
+  app.post("/api/telegram/load-all-messages", async (req, res) => {
+    try {
+      const chats = await storage.getTelegramChats();
+      let totalLoaded = 0;
+      
+      for (const chat of chats) {
+        try {
+          await telegramService.loadMessages(chat.chatId, 100);
+          totalLoaded++;
+          console.log(`Loaded messages from chat: ${chat.title} (${chat.chatId})`);
+        } catch (chatError) {
+          console.log(`Failed to load messages from chat ${chat.chatId}:`, chatError);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Сообщения загружены из ${totalLoaded} чатов`,
+        totalChats: chats.length,
+        loadedChats: totalLoaded
+      });
+    } catch (error) {
+      console.error("Load all messages error:", error);
+      res.status(500).json({ message: "Ошибка загрузки всех сообщений" });
+    }
+  });
+
   // Новый API для анализа периода с полным контекстом
   app.post("/api/ai/analyze-period", async (req, res) => {
     try {
