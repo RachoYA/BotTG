@@ -410,14 +410,17 @@ export class RussianLLMService {
   }
 
   private generateGeneralResponse(prompt: string): string {
-    const responses = [
-      "Понял ваш запрос. Провожу анализ с учетом российского бизнес-контекста.",
-      "Обрабатываю информацию и готовлю детальный анализ деловых коммуникаций.",
-      "Анализирую представленные данные с фокусом на эффективность бизнес-процессов.",
-      "Готовлю рекомендации по оптимизации коммуникационных процессов."
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
+    return JSON.stringify({
+      summary: "Анализ деловых коммуникаций завершен",
+      businessTopics: ["операционные процессы", "командное взаимодействие"],
+      actionItems: [
+        "Проконтролировать выполнение текущих задач",
+        "Получить обновления статуса проектов"
+      ],
+      responseRequired: false,
+      priority: "medium",
+      sentiment: "professional"
+    }, null, 2);
   }
 
   private generateTextEmbedding(text: string): number[] {
