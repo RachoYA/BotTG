@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "@/components/sidebar";
+import MobileSidebar from "@/components/mobile-sidebar";
 import PeriodAnalysis from "@/components/period-analysis";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

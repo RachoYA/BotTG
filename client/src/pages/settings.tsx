@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, MessageCircle, Brain, Database, Calendar } from "lucide-react";
-import Sidebar from "@/components/sidebar";
+import MobileSidebar from "@/components/mobile-sidebar";
 import TelegramSetup from "@/components/telegram-setup";
 import AIModelTesting from "@/components/ai-model-testing";
 import DatabaseManagement from "@/components/database-management";

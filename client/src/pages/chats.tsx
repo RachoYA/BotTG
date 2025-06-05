@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import Sidebar from "@/components/sidebar";
+import MobileSidebar from "@/components/mobile-sidebar";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,34 +108,38 @@ export default function ChatsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar />
+      <MobileSidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm border-b px-6 py-4">
-          <div className="flex items-center justify-between">
+        <header className="bg-white shadow-sm border-b mobile-px mobile-py pt-16 lg:pt-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Управление чатами</h2>
-              <p className="text-gray-600">Настройка мониторинга Telegram чатов</p>
+              <h2 className="mobile-text-2xl font-bold text-gray-800">Управление чатами</h2>
+              <p className="mobile-text-base text-gray-600">Настройка мониторинга Telegram чатов</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => reloadDialogsMutation.mutate()}
-                disabled={reloadDialogsMutation.isPending || !telegramStatus?.connected}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${reloadDialogsMutation.isPending ? 'animate-spin' : ''}`} />
-                Обновить чаты
-              </Button>
-              <Button
-                onClick={() => loadAllMessagesMutation.mutate()}
-                disabled={loadAllMessagesMutation.isPending || !telegramStatus?.connected}
-                variant="default"
-                size="sm"
-              >
-                <Download className={`h-4 w-4 mr-2 ${loadAllMessagesMutation.isPending ? 'animate-spin' : ''}`} />
-                {loadAllMessagesMutation.isPending ? 'Загружаем...' : 'Загрузить все сообщения'}
-              </Button>
+            <div className="flex flex-col lg:flex-row lg:items-center space-y-2 lg:space-y-0 lg:space-x-4">
+              <div className="flex flex-col lg:flex-row space-y-2 lg:space-y-0 lg:space-x-2 w-full lg:w-auto">
+                <Button
+                  onClick={() => reloadDialogsMutation.mutate()}
+                  disabled={reloadDialogsMutation.isPending || !telegramStatus?.connected}
+                  variant="outline"
+                  className="mobile-btn w-full lg:w-auto"
+                >
+                  <RefreshCw className={`h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2 ${reloadDialogsMutation.isPending ? 'animate-spin' : ''}`} />
+                  <span className="hidden lg:inline">Обновить чаты</span>
+                  <span className="lg:hidden">Обновить</span>
+                </Button>
+                <Button
+                  onClick={() => loadAllMessagesMutation.mutate()}
+                  disabled={loadAllMessagesMutation.isPending || !telegramStatus?.connected}
+                  variant="default"
+                  className="mobile-btn w-full lg:w-auto"
+                >
+                  <Download className={`h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2 ${loadAllMessagesMutation.isPending ? 'animate-spin' : ''}`} />
+                  <span className="hidden lg:inline">{loadAllMessagesMutation.isPending ? 'Загружаем...' : 'Загрузить все сообщения'}</span>
+                  <span className="lg:hidden">{loadAllMessagesMutation.isPending ? 'Загрузка...' : 'Загрузить'}</span>
+                </Button>
+              </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-success rounded-full"></div>
                 <span className="text-sm font-medium text-success">
@@ -146,26 +150,26 @@ export default function ChatsPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="grid gap-6">
+        <main className="flex-1 overflow-y-auto mobile-p">
+          <div className="grid mobile-gap">
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid mobile-grid-2 mobile-gap">
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <MessageSquare className="h-8 w-8 text-blue-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Всего чатов</p>
-                    <p className="text-2xl font-bold">{chats?.length || 0}</p>
+                <CardContent className="flex items-center mobile-card">
+                  <MessageSquare className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
+                  <div className="ml-2 lg:ml-4">
+                    <p className="mobile-text-sm font-medium text-gray-600">Всего чатов</p>
+                    <p className="mobile-text-2xl font-bold">{chats?.length || 0}</p>
                   </div>
                 </CardContent>
               </Card>
               
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <Users className="h-8 w-8 text-green-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Мониторинг включен</p>
-                    <p className="text-2xl font-bold">
+                <CardContent className="flex items-center mobile-card">
+                  <Users className="h-6 w-6 lg:h-8 lg:w-8 text-green-600" />
+                  <div className="ml-2 lg:ml-4">
+                    <p className="mobile-text-sm font-medium text-gray-600">Мониторинг</p>
+                    <p className="mobile-text-2xl font-bold">
                       {chats?.filter((chat: any) => chat.isMonitored).length || 0}
                     </p>
                   </div>
@@ -173,11 +177,11 @@ export default function ChatsPage() {
               </Card>
               
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <ToggleRight className="h-8 w-8 text-purple-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Активных</p>
-                    <p className="text-2xl font-bold">
+                <CardContent className="flex items-center mobile-card">
+                  <ToggleRight className="h-6 w-6 lg:h-8 lg:w-8 text-purple-600" />
+                  <div className="ml-2 lg:ml-4">
+                    <p className="mobile-text-sm font-medium text-gray-600">Активных</p>
+                    <p className="mobile-text-2xl font-bold">
                       {chats?.filter((chat: any) => chat.isMonitored && chat.messageCount > 0).length || 0}
                     </p>
                   </div>
