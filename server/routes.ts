@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ 
         status: "error",
-        model: "russian-chat",
+        model: "qwen",
         port: 8080,
         isRunning: false
       });

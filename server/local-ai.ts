@@ -13,7 +13,7 @@ interface LocalAIConfig {
 const defaultConfig: LocalAIConfig = {
   baseURL: "http://localhost:8080/v1",
   apiKey: "russian-llm",
-  model: "russian-chat",
+  model: "qwen",
   embeddingModel: "russian-embeddings"
 };
 

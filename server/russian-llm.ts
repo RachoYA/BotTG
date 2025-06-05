@@ -10,7 +10,7 @@ interface RussianLLMConfig {
 
 const defaultConfig: RussianLLMConfig = {
   port: 8080,
-  model: 'russian-chat',
+  model: 'qwen',
   maxTokens: 2048,
   temperature: 0.7
 };
