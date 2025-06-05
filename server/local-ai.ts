@@ -294,19 +294,33 @@ Respond with JSON containing:
     console.log(`First 200 chars of conversation: ${conversationText.substring(0, 200)}...`);
 
     try {
-      const response = await this.generateChatCompletion([
-        {
-          role: "system",
-          content: systemPrompt
+      // Прямое обращение к qwen без перехвата русской LLM
+      const directResponse = await fetch('http://localhost:8080/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer dummy-key'
         },
-        {
-          role: "user",
-          content: `Chat: ${chatTitle}\n\nAnalyze these ${messageLimit} messages:\n\n${conversationText}`
-        }
-      ], {
-        responseFormat: { type: "json_object" },
-        maxTokens: 1500
+        body: JSON.stringify({
+          model: 'qwen',
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user", 
+              content: `ДЕТАЛЬНО проанализируй переписку "${chatTitle}" из ${messageLimit} сообщений за выбранный период:\n\n${conversationText}`
+            }
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 1500,
+          temperature: 0.3
+        })
       });
+      
+      const responseData = await directResponse.json();
+      const response = responseData.choices[0]?.message?.content || "";
 
       console.log(`Raw model response: ${response.substring(0, 300)}...`);
       

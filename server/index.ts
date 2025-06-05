@@ -39,13 +39,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize Russian LLM service first
-  try {
-    await russianLLM.initialize();
-    console.log('Russian LLM service started successfully');
-  } catch (error) {
-    console.error('Failed to start Russian LLM service:', error);
-  }
+  // Временно отключаем Russian LLM service для прямого доступа к qwen
+  // try {
+  //   await russianLLM.initialize();
+  //   console.log('Russian LLM service started successfully');
+  // } catch (error) {
+  //   console.error('Failed to start Russian LLM service:', error);
+  // }
 
   const server = await registerRoutes(app);
   
