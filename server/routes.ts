@@ -256,6 +256,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Новый API для анализа периода с полным контекстом
+  app.post("/api/ai/analyze-period", async (req, res) => {
+    try {
+      const { startDate, endDate, chatId } = req.body;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "startDate и endDate обязательны" });
+      }
+
+      if (chatId) {
+        // Анализ конкретного чата с полным контекстом
+        await aiService.analyzeConversationPeriod(chatId, new Date(startDate), new Date(endDate));
+        res.json({ 
+          success: true, 
+          message: `Анализ чата ${chatId} с полным контекстом завершен` 
+        });
+      } else {
+        // Анализ всех чатов за период
+        const result = await aiService.processPeriodMessages(startDate, endDate);
+        res.json({ 
+          success: true, 
+          message: "Анализ периода завершен",
+          processedChats: result.processedChats,
+          createdTasks: result.createdTasks,
+          foundCompletedTasks: result.foundCompletedTasks
+        });
+      }
+    } catch (error) {
+      console.error("Ошибка анализа периода:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Ошибка анализа' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Telegram connection endpoints

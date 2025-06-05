@@ -114,49 +114,121 @@ export class AIService {
     }
   }
 
-  private async extractTasksFromMessages(messages: any[]): Promise<void> {
+  // Новый метод для анализа с полным контекстом за период
+  async analyzeConversationPeriod(chatId: string, startDate: Date, endDate: Date): Promise<void> {
     try {
-      if (messages.length === 0) return;
-
-      // Получаем название чата для контекста
-      const chatTitle = await this.getChatTitle(messages[0]?.chatId);
+      console.log(`Анализируем чат ${chatId} за период ${startDate.toISOString()} - ${endDate.toISOString()}`);
       
-      // Получаем существующие задачи из этого чата для проверки дублирования
+      // Получаем ВСЕ сообщения из чата за период для полного контекста
+      const allMessages = await this.getMessagesForPeriod(chatId, startDate, endDate);
+      if (allMessages.length === 0) return;
+
+      const chatTitle = await this.getChatTitle(chatId);
+      
+      // Получаем существующие задачи из этого чата
       const existingTasks = await storage.getExtractedTasks();
-      const chatTasks = existingTasks.filter(t => t.chatId === messages[0]?.chatId);
+      const chatTasks = existingTasks.filter(t => t.chatId === chatId);
       const existingTaskTitles = chatTasks.map(t => t.title.toLowerCase());
 
-      const messagesText = messages.map(m => `[${m.timestamp}] ${m.senderName || 'Unknown'}: ${m.text}`).join('\n');
+      // Формируем полный контекст переписки с временными метками
+      const conversationContext = allMessages
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map(m => `[${new Date(m.timestamp).toLocaleString('ru-RU')}] ${m.senderName || 'Unknown'}: ${m.text}`)
+        .join('\n');
+
+      const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки с ПОЛНЫМ контекстом.
       
-      const systemPrompt = `Ты - AI-ассистент для анализа деловой переписки. 
-      Анализируй сообщения и извлекай задачи, поручения, дедлайны ТОЛЬКО если они НЕ выполнены.
-      ВАЖНО: Учитывай контекст - если в переписке есть упоминания о выполнении задачи, НЕ создавай её.
-      НЕ создавай дубликаты существующих задач.
+ВАЖНЫЕ ПРАВИЛА:
+1. Анализируй ВСЮ переписку целиком, учитывай хронологию событий
+2. НЕ создавай задачи, если в ЛЮБОЙ части переписки есть упоминания об их выполнении
+3. Если задача была поставлена, но позже выполнена - НЕ создавай её
+4. Учитывай статусы: "сделано", "готово", "выполнено", "оплачено", "отправлено" и подобные
+5. НЕ создавай дубликаты существующих задач
+6. Создавай задачи только для АКТУАЛЬНЫХ невыполненных поручений
 
 Верни результат в JSON формате:
 {
   "tasks": [
     {
       "title": "краткое название задачи",
-      "description": "подробное описание с контекстом",
-      "priority": "низкий|средний|высокий|критический",
-      "deadline": "YYYY-MM-DD или null если не указан",
+      "description": "подробное описание с контекстом и обоснованием",
+      "priority": "низкий|средний|высокий|критический", 
+      "deadline": "YYYY-MM-DD или null",
       "isCompleted": false,
-      "isDuplicate": false
+      "contextEvidence": "цитата из переписки, подтверждающая необходимость задачи"
+    }
+  ],
+  "completedTasks": [
+    {
+      "title": "название выполненной задачи",
+      "completionEvidence": "цитата о выполнении"
     }
   ]
-}
-
-Если задач нет, верни {"tasks": []}`;
+}`;
 
       const existingContext = existingTaskTitles.length > 0 
-        ? `\nСуществующие задачи из этого чата: ${existingTaskTitles.join(', ')}`
+        ? `\n\nСуществующие задачи из этого чата (НЕ создавай дубликаты): ${existingTaskTitles.join(', ')}`
         : '';
 
-      const prompt = `Проанализируй следующие сообщения из чата "${chatTitle}" и извлеки все задачи, поручения и дедлайны.
-      ВАЖНО: Создавай задачи только если они НЕ выполнены согласно контексту переписки.
-      НЕ создавай дубликаты существующих задач.${existingContext}
+      const prompt = `Проанализируй ПОЛНУЮ переписку из чата "${chatTitle}" за указанный период.
+      Учти весь контекст и хронологию для определения актуальных задач.${existingContext}
 
+ПОЛНАЯ ПЕРЕПИСКА:
+${conversationContext}`;
+      
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      
+      if (parsed.tasks && Array.isArray(parsed.tasks)) {
+        for (const task of parsed.tasks) {
+          // Проверка на дублирование с существующими задачами
+          const isDuplicate = existingTaskTitles.some(existing => 
+            existing.includes(task.title.toLowerCase()) || 
+            task.title.toLowerCase().includes(existing)
+          );
+          
+          if (!isDuplicate && !task.isCompleted) {
+            const insertTask: InsertExtractedTask = {
+              title: task.title,
+              description: `[${chatTitle}] ${task.description}\n\nОбоснование: ${task.contextEvidence}`,
+              urgency: this.mapPriorityToUrgency(task.priority),
+              deadline: task.deadline || null,
+              status: 'pending',
+              chatId: chatId
+            };
+            
+            await storage.createExtractedTask(insertTask);
+            console.log(`Создана задача с контекстом: ${task.title} из чата ${chatTitle}`);
+          }
+        }
+      }
+
+      // Логируем информацию о выполненных задачах для анализа
+      if (parsed.completedTasks && Array.isArray(parsed.completedTasks)) {
+        console.log(`Найдено выполненных задач в чате ${chatTitle}:`, parsed.completedTasks.length);
+      }
+      
+    } catch (error) {
+      console.error("Ошибка при анализе переписки с контекстом:", error);
+    }
+  }
+
+  private async extractTasksFromMessages(messages: any[]): Promise<void> {
+    // Упрощенный метод для быстрой обработки новых сообщений
+    // Основной анализ теперь делается через analyzeConversationPeriod
+    try {
+      if (messages.length === 0) return;
+
+      const chatTitle = await this.getChatTitle(messages[0]?.chatId);
+      const messagesText = messages.map(m => `[${m.timestamp}] ${m.senderName || 'Unknown'}: ${m.text}`).join('\n');
+      
+      // Простая проверка на явные задачи в новых сообщениях
+      const systemPrompt = `Анализируй только НОВЫЕ сообщения на предмет ЯВНЫХ новых задач.
+      НЕ анализируй статус старых задач. Создавай задачи только если есть ПРЯМОЕ поручение.
+      
+Верни JSON: {"tasks": [{"title": "название", "description": "описание", "priority": "средний"}]}`;
+
+      const prompt = `Найди только ЯВНЫЕ новые задачи в сообщениях из чата "${chatTitle}":
 ${messagesText}`;
       
       const response = await callOpenAI(prompt, systemPrompt);
@@ -164,25 +236,17 @@ ${messagesText}`;
       
       if (parsed.tasks && Array.isArray(parsed.tasks)) {
         for (const task of parsed.tasks) {
-          // Дополнительная проверка на дублирование
-          const isDuplicate = existingTaskTitles.some(existing => 
-            existing.includes(task.title.toLowerCase()) || 
-            task.title.toLowerCase().includes(existing)
-          );
+          const insertTask: InsertExtractedTask = {
+            title: task.title,
+            description: `[${chatTitle}] ${task.description}`,
+            urgency: this.mapPriorityToUrgency(task.priority),
+            deadline: null,
+            status: 'pending',
+            chatId: messages[0]?.chatId || ''
+          };
           
-          if (!isDuplicate && !task.isCompleted && !task.isDuplicate) {
-            const insertTask: InsertExtractedTask = {
-              title: task.title,
-              description: `[${chatTitle}] ${task.description}`,
-              urgency: this.mapPriorityToUrgency(task.priority),
-              deadline: task.deadline || null,
-              status: 'pending',
-              chatId: messages[0]?.chatId || ''
-            };
-            
-            await storage.createExtractedTask(insertTask);
-            console.log(`Создана задача: ${task.title} из чата ${chatTitle}`);
-          }
+          await storage.createExtractedTask(insertTask);
+          console.log(`Создана задача: ${task.title} из чата ${chatTitle}`);
         }
       }
     } catch (error) {
@@ -322,66 +386,135 @@ ${messagesText}`;
     }
   }
 
+  // Новый метод для обработки периодов с полным контекстом
   async processPeriodMessages(startDate: string, endDate: string): Promise<{
-    processedMessages: number;
+    processedChats: number;
     createdTasks: number;
-    createdSummaries: number;
+    foundCompletedTasks: number;
   }> {
     try {
-      console.log(`Обработка сообщений за период: ${startDate} - ${endDate}`);
+      console.log(`Начинаем анализ периода ${startDate} - ${endDate} с полным контекстом`);
       
       const start = new Date(startDate);
       const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999); // Включаем весь последний день
-
-      // Получаем все чаты
-      const chats = await storage.getTelegramChats();
-      let totalProcessedMessages = 0;
+      end.setHours(23, 59, 59, 999); // Включаем весь день
+      
+      // Получаем все чаты, которые были активны в период
+      const allChats = await storage.getMonitoredChats();
+      const personalChats = allChats.filter(chat => this.isPersonalChat(chat));
+      
+      let processedChats = 0;
       let createdTasks = 0;
-      let createdSummaries = 0;
-
-      for (const chat of chats) {
-        // Загружаем сообщения из Telegram для этого чата за период
+      let foundCompletedTasks = 0;
+      
+      for (const chat of personalChats) {
+        // Загружаем и сохраняем сообщения для этого чата за период
         await this.loadChatMessagesForPeriod(chat.chatId, start, end);
         
-        // Получаем сообщения из базы данных за период
-        const messages = await this.getMessagesForPeriod(chat.chatId, start, end);
+        // Анализируем с полным контекстом
+        const tasksCountBefore = (await storage.getExtractedTasks()).length;
+        await this.analyzeConversationPeriod(chat.chatId, start, end);
+        const tasksCountAfter = (await storage.getExtractedTasks()).length;
         
-        if (messages.length === 0) {
-          continue;
-        }
-
-        totalProcessedMessages += messages.length;
-
-        // Определяем тип чата: личный vs групповой/канал
-        const isPersonalChat = this.isPersonalChat(chat);
-
-        if (isPersonalChat) {
-          // Для личных чатов создаем задачи
-          const extractedTasks = await this.extractTasksFromChatMessages(messages);
-          createdTasks += extractedTasks;
-          console.log(`Создано ${extractedTasks} задач из личного чата: ${chat.title}`);
-        } else {
-          // Для групповых чатов создаем общий AI-саммари
-          const summary = await this.createGroupChatSummary(chat, messages, startDate, endDate);
-          if (summary) {
-            createdSummaries++;
-            console.log(`Создан саммари для группового чата: ${chat.title}`);
-          }
+        const newTasks = tasksCountAfter - tasksCountBefore;
+        if (newTasks > 0) {
+          createdTasks += newTasks;
+          processedChats++;
         }
       }
-
-      console.log(`Обработка завершена: ${totalProcessedMessages} сообщений, ${createdTasks} задач, ${createdSummaries} саммари`);
-
+      
+      console.log(`Анализ периода завершен: ${processedChats} чатов, ${createdTasks} задач`);
+      
       return {
-        processedMessages: totalProcessedMessages,
+        processedChats,
         createdTasks,
-        createdSummaries
+        foundCompletedTasks
+      };
+    } catch (error) {
+      console.error("Ошибка при анализе периода:", error);
+      throw error;
+    }
+  }
+
+  private isPersonalChat(chat: any): boolean {
+    // Личные чаты и небольшие рабочие группы (до 10 участников)
+    return !chat.isChannel && !chat.isBroadcast && (!chat.participantCount || chat.participantCount <= 10);
+  }
+
+  private async loadChatMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<void> {
+    try {
+      // Проверяем, есть ли уже сообщения за этот период в базе
+      const existingMessages = await this.getMessagesForPeriod(chatId, start, end);
+      
+      if (existingMessages.length === 0) {
+        console.log(`Загружаем сообщения для чата ${chatId} за период ${start.toDateString()} - ${end.toDateString()}`);
+        // Здесь можно добавить загрузку через Telegram API при необходимости
+      }
+    } catch (error) {
+      console.error(`Ошибка при загрузке сообщений для чата ${chatId}:`, error);
+    }
+  }
+
+  private async getMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<any[]> {
+    try {
+      const allMessages = await storage.getTelegramMessages(chatId);
+      return allMessages.filter(message => {
+        const messageDate = new Date(message.timestamp);
+        return messageDate >= start && messageDate <= end;
+      });
+    } catch (error) {
+      console.error("Ошибка при получении сообщений за период:", error);
+      return [];
+    }
+  }
+
+  private async extractTasksFromChatMessages(messages: any[]): Promise<number> {
+    if (messages.length === 0) return 0;
+    
+    const tasksCountBefore = (await storage.getExtractedTasks()).length;
+    await this.extractTasksFromMessages(messages);
+    const tasksCountAfter = (await storage.getExtractedTasks()).length;
+    
+    return tasksCountAfter - tasksCountBefore;
+  }
+
+  private async createGroupChatSummary(chat: any, messages: any[], startDate: string, endDate: string): Promise<boolean> {
+    try {
+      if (messages.length === 0) return false;
+
+      const messagesText = messages
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map(m => `[${new Date(m.timestamp).toLocaleString('ru-RU')}] ${m.senderName || 'Unknown'}: ${m.text}`)
+        .join('\n');
+
+      const systemPrompt = `Создай краткую сводку по групповому чату за период.
+      Выдели ключевые темы, решения и важные обсуждения.
+      
+Верни JSON: {
+  "summary": "краткая сводка",
+  "keyTopics": ["тема1", "тема2"],
+  "requiresResponse": ["что требует ответа или действий"]
+}`;
+
+      const prompt = `Проанализируй переписку в групповом чате "${chat.title}" за ${startDate} - ${endDate}:
+${messagesText}`;
+
+      const response = await callOpenAI(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+
+      const insertSummary: InsertDailySummary = {
+        date: startDate,
+        summary: parsed.summary,
+        keyTopics: parsed.keyTopics || [],
+        requiresResponse: parsed.requiresResponse || []
       };
 
+      await storage.createDailySummary(insertSummary);
+      console.log(`Создана сводка для группового чата: ${chat.title}`);
+      return true;
     } catch (error) {
-      console.error('Ошибка обработки сообщений за период:', error);
-      throw error;
+      console.error("Ошибка при создании сводки группового чата:", error);
+      return false;
     }
   }
 
