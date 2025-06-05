@@ -105,6 +105,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get messages from specific chat or all messages
+  app.get("/api/messages", async (req, res) => {
+    try {
+      const { chatId, limit } = req.query;
+      const messages = await storage.getTelegramMessages(
+        chatId as string, 
+        limit ? parseInt(limit as string) : undefined
+      );
+      res.json(messages);
+    } catch (error) {
+      console.error("Error getting messages:", error);
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
   // Get monitored chats only
   app.get("/api/chats/monitored", async (req, res) => {
     try {
