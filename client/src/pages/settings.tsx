@@ -6,6 +6,7 @@ import TelegramSetup from "@/components/telegram-setup";
 import AIModelTesting from "@/components/ai-model-testing";
 import DatabaseManagement from "@/components/database-management";
 import PeriodAnalysis from "@/components/period-analysis";
+import RAGManagement from "@/components/rag-management";
 
 export default function SettingsPage() {
   return (
@@ -29,7 +30,7 @@ export default function SettingsPage() {
           <div className="max-w-4xl mx-auto">
 
       <Tabs defaultValue="telegram" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="telegram" className="flex items-center">
             <MessageCircle className="w-4 h-4 mr-2" />
             Telegram
@@ -37,6 +38,10 @@ export default function SettingsPage() {
           <TabsTrigger value="ai" className="flex items-center">
             <Brain className="w-4 h-4 mr-2" />
             AI модель
+          </TabsTrigger>
+          <TabsTrigger value="rag" className="flex items-center">
+            <Brain className="w-4 h-4 mr-2" />
+            RAG система
           </TabsTrigger>
           <TabsTrigger value="analysis" className="flex items-center">
             <Calendar className="w-4 h-4 mr-2" />
@@ -54,6 +59,10 @@ export default function SettingsPage() {
 
         <TabsContent value="ai">
           <AIModelTesting />
+        </TabsContent>
+
+        <TabsContent value="rag">
+          <RAGManagement />
         </TabsContent>
 
         <TabsContent value="analysis">

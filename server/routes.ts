@@ -278,6 +278,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize RAG system
+  app.post("/api/rag/initialize", async (req, res) => {
+    try {
+      const { ragService } = await import("./rag");
+      await ragService.initialize();
+      const stats = ragService.getStats();
+      
+      res.json({ 
+        success: true, 
+        message: "RAG система инициализирована",
+        stats
+      });
+    } catch (error) {
+      console.error("RAG initialization error:", error);
+      res.status(500).json({ message: "Ошибка инициализации RAG системы" });
+    }
+  });
+
+  // Get RAG system stats
+  app.get("/api/rag/stats", async (req, res) => {
+    try {
+      const { ragService } = await import("./rag");
+      const stats = ragService.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("RAG stats error:", error);
+      res.status(500).json({ message: "Ошибка получения статистики RAG" });
+    }
+  });
+
+  // Semantic search endpoint
+  app.post("/api/rag/search", async (req, res) => {
+    try {
+      const { query, chatIds, limit = 10 } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ message: "Query is required" });
+      }
+
+      const { ragService } = await import("./rag");
+      const results = await ragService.semanticSearch(query, chatIds, limit);
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Semantic search error:", error);
+      res.status(500).json({ message: "Ошибка семантического поиска" });
+    }
+  });
+
   // Новый API для анализа периода с полным контекстом
   app.post("/api/ai/analyze-period", async (req, res) => {
     try {
