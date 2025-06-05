@@ -363,41 +363,89 @@ ${conversationText}
         console.log('Running offline detailed analysis with local model qwen');
         console.log(`Sending prompt to qwen model: ${detailedPrompt.substring(0, 200)}...`);
         
-        // Используем продвинутый локальный анализ без внешних API
-        console.log('Running advanced offline analysis for detailed conversation breakdown');
+        // Используем оффлайн AI модель для детального анализа
+        console.log('Running offline AI analysis for detailed conversation breakdown');
+        
+        try {
+          const { offlineAI } = await import('./offline-ai.js');
+          const aiResult = await offlineAI.analyzeConversation(conversationText, chatTitle);
+          console.log(`Offline AI analysis completed: ${aiResult.summary}`);
+          return aiResult;
+        } catch (error) {
+          console.log('Offline AI failed, using enhanced JavaScript analysis:', error);
+        }
         
         // Fallback JavaScript анализ если qwen недоступен
         const messageTexts = conversationText.split('\n').filter(line => line.trim());
         const participantMessages = messageTexts.filter(msg => msg.includes('Грачья:'));
         const partnerMessages = messageTexts.filter(msg => msg.includes('Сонышко:'));
         
-        // Детальный анализ содержания сообщений
+        // Продвинутый анализ для поиска неотвеченных вопросов к Грачья
         const questionMessages = messageTexts.filter(msg => msg.includes('?'));
         const myQuestions = questionMessages.filter(msg => msg.includes('Грачья:'));
-        const partnerQuestions = questionMessages.filter(msg => msg.includes('Сонышко:') || !msg.includes('Грачья:'));
         
-        // Поиск неотвеченных вопросов к Грачья
+        // Находим все вопросы НЕ от Грачья (к Грачья)
+        const questionsToGracha = questionMessages.filter(msg => !msg.includes('Грачья:'));
+        
+        // Улучшенный поиск неотвеченных вопросов к Грачья
         const unansweredToGracha: string[] = [];
-        partnerQuestions.forEach(question => {
-          const questionText = question.split(':')[1]?.trim();
-          if (questionText) {
-            // Проверяем есть ли ответ в последующих сообщениях
-            const questionIndex = messageTexts.indexOf(question);
-            const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 5);
-            const hasAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
-            
-            if (!hasAnswer) {
-              unansweredToGracha.push(questionText);
+        
+        questionsToGracha.forEach(question => {
+          const questionIndex = messageTexts.indexOf(question);
+          // Смотрим в следующих 10 сообщениях есть ли ответ от Грачья
+          const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 11);
+          const hasDirectAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
+          
+          if (!hasDirectAnswer) {
+            // Извлекаем чистый текст вопроса
+            const parts = question.split('] ');
+            if (parts.length > 1) {
+              const messageContent = parts[1];
+              const colonIndex = messageContent.indexOf(':');
+              if (colonIndex > -1) {
+                const questionText = messageContent.substring(colonIndex + 1).trim();
+                if (questionText.length > 5) { // Фильтруем слишком короткие
+                  unansweredToGracha.push(questionText);
+                }
+              }
             }
           }
         });
         
-        // Анализ проблем и тем
-        const problemIndicators = messageTexts.filter(msg => 
-          msg.includes('устал') || msg.includes('болит') || msg.includes('проблем') ||
-          msg.includes('сложно') || msg.includes('не могу') || msg.includes('помочь')
+        // Детальный поиск проблем в сообщениях
+        const problemKeywords = ['устал', 'болит', 'проблем', 'сложно', 'не могу', 'помочь', 'плохо', 'больно', 'тяжело', 'трудно'];
+        const problemMessages = messageTexts.filter(msg => 
+          problemKeywords.some(keyword => msg.toLowerCase().includes(keyword))
         );
         
+        const identifiedProblems = problemMessages.map(msg => {
+          const parts = msg.split('] ');
+          if (parts.length > 1) {
+            const messageContent = parts[1];
+            const colonIndex = messageContent.indexOf(':');
+            if (colonIndex > -1) {
+              const speaker = messageContent.substring(0, colonIndex);
+              const text = messageContent.substring(colonIndex + 1).trim();
+              return `${speaker}: ${text.substring(0, 100)}`;
+            }
+          }
+          return msg.substring(0, 100);
+        });
+        
+        // Извлекаем конкретные вопросы от Грачья
+        const myQuestionTexts = myQuestions.map(q => {
+          const parts = q.split('] ');
+          if (parts.length > 1) {
+            const messageContent = parts[1];
+            const colonIndex = messageContent.indexOf(':');
+            if (colonIndex > -1) {
+              return messageContent.substring(colonIndex + 1).trim();
+            }
+          }
+          return q;
+        });
+        
+        // Определяем бизнес-темы
         const businessTopics = [];
         if (messageTexts.some(msg => msg.includes('работ') || msg.includes('проект'))) {
           businessTopics.push('рабочие вопросы');
@@ -408,9 +456,12 @@ ${conversationText}
         if (messageTexts.some(msg => msg.includes('самочувств') || msg.includes('здоровь'))) {
           businessTopics.push('вопросы здоровья');
         }
+        if (businessTopics.length === 0) {
+          businessTopics.push('личное общение');
+        }
         
         const hasEmotions = messageTexts.some(msg => /[😘😂🥰💘🫶😆]/.test(msg));
-        const hasConcerns = problemIndicators.length > 0;
+        const hasConcerns = problemMessages.length > 0;
         const hasQuestions = questionMessages.length > 0;
         
         const detailedResult = {
