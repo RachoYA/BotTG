@@ -25,10 +25,10 @@ class OfflineAIAnalyzer {
     try {
       console.log('Initializing offline AI model for conversation analysis...');
       
-      // Используем легкую модель для классификации текста
+      // Используем модель для понимания естественного языка
       this.classifier = await pipeline(
-        'text-classification',
-        'Xenova/distilbert-base-uncased-finetuned-sst-2-english'
+        'feature-extraction',
+        'Xenova/all-MiniLM-L6-v2'
       );
       
       this.initialized = true;
@@ -44,14 +44,17 @@ class OfflineAIAnalyzer {
       await this.initialize();
     }
 
+    console.log('Starting AI-powered conversation analysis...');
     const messageTexts = conversationText.split('\n').filter(line => line.trim());
     
-    // Находим все вопросы
+    // AI анализ всех вопросов с векторными эмбеддингами
     const questionMessages = messageTexts.filter(msg => msg.includes('?'));
     const questionsToGracha = questionMessages.filter(msg => !msg.includes('Грачья:'));
     const questionsFromGracha = questionMessages.filter(msg => msg.includes('Грачья:'));
 
-    // Контекстный анализ неотвеченных вопросов к Грачья
+    console.log(`Found ${questionsToGracha.length} questions directed to Грачья`);
+
+    // AI-контекстный анализ каждого вопроса
     const unansweredToGracha: string[] = [];
     
     for (const question of questionsToGracha) {
@@ -59,20 +62,24 @@ class OfflineAIAnalyzer {
       const questionText = this.extractQuestionText(question);
       
       if (questionText && questionText.length > 5) {
-        // Проверяем содержит ли сам вопрос ответ (риторический вопрос)
-        const isRhetoricalQuestion = this.isRhetoricalQuestion(questionText, question);
+        console.log(`Analyzing question: "${questionText}"`);
+        
+        // AI анализ риторических вопросов
+        const isRhetoricalQuestion = await this.aiAnalyzeRhetoricalQuestion(questionText, question);
         
         if (!isRhetoricalQuestion) {
-          // Ищем ответ от Грачья в следующих 15 сообщениях
+          // AI поиск семантически связанных ответов
           const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 16);
-          const hasDirectAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
+          const hasSemanticAnswer = await this.aiAnalyzeContextualAnswer(questionText, subsequentMessages);
           
-          // Дополнительная проверка: есть ли тематически связанный ответ
-          const hasContextualAnswer = this.hasContextualAnswer(questionText, subsequentMessages);
-          
-          if (!hasDirectAnswer && !hasContextualAnswer) {
+          if (!hasSemanticAnswer) {
             unansweredToGracha.push(questionText);
+            console.log(`Unanswered question identified: "${questionText}"`);
+          } else {
+            console.log(`Question has contextual answer: "${questionText}"`);
           }
+        } else {
+          console.log(`Rhetorical question excluded: "${questionText}"`);
         }
       }
     }
