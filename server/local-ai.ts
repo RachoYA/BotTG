@@ -275,7 +275,22 @@ Respond with JSON containing these fields:
         maxTokens: 1000
       });
 
-      const result = JSON.parse(response);
+      // Clean the response to extract JSON
+      let cleanResponse = response.trim();
+      
+      // Remove any text before the JSON starts
+      const jsonStart = cleanResponse.indexOf('{');
+      if (jsonStart > 0) {
+        cleanResponse = cleanResponse.substring(jsonStart);
+      }
+      
+      // Remove any text after the JSON ends
+      const jsonEnd = cleanResponse.lastIndexOf('}');
+      if (jsonEnd >= 0 && jsonEnd < cleanResponse.length - 1) {
+        cleanResponse = cleanResponse.substring(0, jsonEnd + 1);
+      }
+      
+      const result = JSON.parse(cleanResponse);
       
       // Ensure all required fields exist
       return {
@@ -346,7 +361,22 @@ Respond with JSON:
         maxTokens: 500
       });
 
-      const result = JSON.parse(response);
+      // Clean the response to extract JSON
+      let cleanResponse = response.trim();
+      
+      // Remove any text before the JSON starts
+      const jsonStart = cleanResponse.indexOf('{');
+      if (jsonStart > 0) {
+        cleanResponse = cleanResponse.substring(jsonStart);
+      }
+      
+      // Remove any text after the JSON ends
+      const jsonEnd = cleanResponse.lastIndexOf('}');
+      if (jsonEnd >= 0 && jsonEnd < cleanResponse.length - 1) {
+        cleanResponse = cleanResponse.substring(0, jsonEnd + 1);
+      }
+      
+      const result = JSON.parse(cleanResponse);
       return {
         type: result.type || "recommendation",
         title: result.title || "Новый инсайт",
