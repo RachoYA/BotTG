@@ -87,6 +87,27 @@ export default function TelegramSetup() {
     },
   });
 
+  const resetSessionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/telegram/reset-session', {});
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/telegram/status'] });
+      toast({
+        title: "Сессия сброшена",
+        description: "Попробуйте подключиться заново",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка сброса сессии",
+        description: error?.message || "Не удалось сбросить сессию",
+        variant: "destructive",
+      });
+    },
+  });
+
   const verifyCodeMutation = useMutation({
     mutationFn: async ({ code, password }: { code: string; password?: string }) => {
       const response = await apiRequest('POST', '/api/telegram/verify', { code, password });
@@ -156,6 +177,10 @@ export default function TelegramSetup() {
       return;
     }
     connectMutation.mutate(phoneNumber);
+  };
+
+  const handleResetSession = () => {
+    resetSessionMutation.mutate();
   };
 
   const handleVerifyCode = () => {
@@ -228,26 +253,20 @@ export default function TelegramSetup() {
                 {connectMutation.isPending ? "Подключение..." : "Подключиться к Telegram"}
               </Button>
               
-              {/* Debug button for testing modal */}
               <Button 
-                onClick={() => {
-                  console.log("Debug: Opening modal manually");
-                  setNeedsCode(true);
-                }}
+                onClick={handleResetSession}
                 variant="outline"
                 className="w-full text-xs"
+                disabled={resetSessionMutation.isPending}
               >
-                Тест модального окна
+                {resetSessionMutation.isPending ? "Сброс..." : "Сбросить сессию Telegram"}
               </Button>
             </div>
           </div>
         )}
 
         {/* Модальное окно для ввода кода */}
-        <Dialog open={needsCode} onOpenChange={(open) => {
-          console.log("Modal open change:", open);
-          setNeedsCode(open);
-        }}>
+        <Dialog open={needsCode} onOpenChange={setNeedsCode} modal={true}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Код подтверждения Telegram</DialogTitle>

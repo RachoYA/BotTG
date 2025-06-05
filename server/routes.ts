@@ -497,6 +497,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/telegram/reset-session", async (req, res) => {
+    try {
+      await telegramService.disconnect();
+      // Clear session file
+      const fs = await import('fs');
+      const sessionPath = '.telegram_session';
+      if (fs.existsSync(sessionPath)) {
+        fs.unlinkSync(sessionPath);
+      }
+      res.json({ success: true, message: "Session cleared successfully" });
+    } catch (error) {
+      console.error("Reset session error:", error);
+      res.status(500).json({ message: "Failed to reset session" });
+    }
+  });
+
   app.post("/api/telegram/load-messages", async (req, res) => {
     try {
       if (!telegramService.isClientConnected()) {
