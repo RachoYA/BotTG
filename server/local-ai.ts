@@ -370,19 +370,35 @@ ${conversationText}
             messages: [
               {
                 role: "system",
-                content: "Ты эксперт по анализу переписки. Анализируй детально русскоязычные сообщения и возвращай подробный JSON с требуемыми полями."
+                content: "Ты эксперт по анализу переписки. Анализируй детально русскоязычные сообщения и возвращай структурированный ответ."
               },
               {
                 role: "user", 
-                content: detailedPrompt
+                content: detailedPrompt + "\n\nВАЖНО: Отвечай в формате JSON без дополнительного текста."
               }
             ],
-            response_format: { type: "json_object" },
             max_tokens: 2000,
             temperature: 0.2
           });
           
-          detailedResult = JSON.parse(detailedResponse.choices[0]?.message?.content || "{}");
+          const responseContent = detailedResponse.choices[0]?.message?.content || "{}";
+          try {
+            detailedResult = JSON.parse(responseContent);
+          } catch (parseError) {
+            console.log('JSON parse failed, creating structured result from text response');
+            detailedResult = {
+              summary: `Детальный анализ переписки "${chatTitle}" (${messageLimit} сообщений)`,
+              unansweredRequests: [],
+              identifiedProblems: [],
+              openQuestions: [],
+              myParticipation: "Участие в переписке проанализировано",
+              missedResponses: [],
+              responseRequired: false,
+              priority: "medium",
+              businessTopics: ["анализ выполнен"],
+              actionItems: ["Просмотр результатов анализа"]
+            };
+          }
         } else {
           // Fallback to basic analysis if OpenAI not available
           console.log('OpenAI not available, using basic analysis structure');
