@@ -28,14 +28,7 @@ export default function RAGManagement() {
   // Get RAG system stats
   const { data: ragStats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/rag/stats'],
-    queryFn: async () => {
-      try {
-        return await apiRequest("GET", "/api/rag/stats");
-      } catch (error) {
-        return { totalMessages: 0, totalChats: 0, totalContexts: 0 };
-      }
-    },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   // Initialize RAG system
@@ -114,21 +107,21 @@ export default function RAGManagement() {
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <MessageSquare className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-blue-600">
-                {statsLoading ? "..." : (ragStats?.totalMessages || 0)}
+                {statsLoading ? "..." : ((ragStats as any)?.totalMessages || 0)}
               </div>
               <div className="text-sm text-blue-600">Сообщений в системе</div>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-green-600">
-                {statsLoading ? "..." : (ragStats?.totalChats || 0)}
+                {statsLoading ? "..." : ((ragStats as any)?.totalChats || 0)}
               </div>
               <div className="text-sm text-green-600">Проанализированных чатов</div>
             </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <BarChart3 className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-purple-600">
-                {statsLoading ? "..." : (ragStats?.totalContexts || 0)}
+                {statsLoading ? "..." : ((ragStats as any)?.totalContexts || 0)}
               </div>
               <div className="text-sm text-purple-600">Контекстов бесед</div>
             </div>
