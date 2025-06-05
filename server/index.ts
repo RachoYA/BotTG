@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
+import { russianLLM } from "./russian-llm.js";
+import { schedulerService } from "./scheduler.js";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +39,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize Russian LLM service first
+  try {
+    await russianLLM.initialize();
+    console.log('Russian LLM service started successfully');
+  } catch (error) {
+    console.error('Failed to start Russian LLM service:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

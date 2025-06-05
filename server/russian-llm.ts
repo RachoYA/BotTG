@@ -30,6 +30,27 @@ export class RussianLLMService {
       return;
     }
     
+    // Check if port is already in use
+    try {
+      const net = await import('net');
+      const testServer = net.createServer();
+      await new Promise((resolve, reject) => {
+        testServer.listen(this.config.port, (err: any) => {
+          if (err) reject(err);
+          else {
+            testServer.close(() => resolve(true));
+          }
+        });
+      });
+    } catch (error: any) {
+      if (error.code === 'EADDRINUSE') {
+        console.log(`Port ${this.config.port} already in use, assuming service is running`);
+        this.isRunning = true;
+        return;
+      }
+      throw error;
+    }
+    
     console.log('Initializing Russian LLM service...');
     
     // Create HTTP server that provides OpenAI-compatible API
