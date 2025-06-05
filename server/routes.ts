@@ -3,12 +3,50 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { telegramService } from "./telegram";
 import { aiService } from "./ai";
+import { localAI } from "./local-ai";
 import { schedulerService } from "./scheduler";
 import { insertTelegramChatSchema, insertPeriodAnalysisSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start services
   schedulerService.start();
+
+  // Local AI management routes
+  app.get("/api/ai/local/status", async (req, res) => {
+    try {
+      const connected = await localAI.testConnection();
+      const config = localAI.getConfig();
+      res.json({
+        connected,
+        config,
+        lastTest: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get local AI status" });
+    }
+  });
+
+  app.post("/api/ai/local/test", async (req, res) => {
+    try {
+      const config = req.body;
+      const { LocalAIService } = await import("./local-ai");
+      const testInstance = new LocalAIService(config);
+      const connected = await testInstance.testConnection();
+      res.json({ connected, message: connected ? "Connection successful" : "Connection failed" });
+    } catch (error) {
+      res.status(500).json({ error: "Connection test failed" });
+    }
+  });
+
+  app.post("/api/ai/local/config", async (req, res) => {
+    try {
+      const config = req.body;
+      localAI.setFallbackMode(config.fallbackEnabled);
+      res.json({ success: true, message: "Configuration updated" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update configuration" });
+    }
+  });
 
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {

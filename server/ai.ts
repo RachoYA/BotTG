@@ -137,14 +137,7 @@ export class AIService {
 - summary: строка с кратким резюме
 - priority: "high", "medium" или "low"`;
 
-      const prompt = `Проанализируй эту переписку из чата "${chatTitle}":
-
-${conversationText}
-
-Выдели ключевые управленческие инсайты и необходимые действия.`;
-
-      const response = await callOpenAI(prompt, systemPrompt);
-      return JSON.parse(response);
+      return await localAI.analyzeBusinessConversation(messages, chatTitle);
 
     } catch (error) {
       console.error("Error in conversation analysis:", error);
