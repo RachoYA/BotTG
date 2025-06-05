@@ -338,25 +338,75 @@ Respond with JSON containing:
       if (needsDetailedAnalysis) {
         console.log("Detected useFullAnalysis flag, running detailed qwen analysis...");
         
-        const detailedPrompt = `Проанализируй эту переписку детально. Переписка "${chatTitle}" содержит ${messageLimit} сообщений:
+        const detailedPrompt = `Проанализируй переписку "${chatTitle}" детально. Найди КОНКРЕТНЫЕ неотвеченные вопросы к пользователю Грачья.
 
+ПЕРЕПИСКА (${messageLimit} сообщений):
 ${conversationText}
 
-Верни подробный JSON анализ с полями:
-- summary: детальное описание содержания переписки
-- unansweredRequests: массив неотвеченных просьб
-- identifiedProblems: выявленные проблемы
-- openQuestions: открытые вопросы
-- myParticipation: анализ моего участия в диалоге
-- missedResponses: пропущенные ответы
-- responseRequired: нужен ли ответ (true/false)
-- priority: приоритет (low/medium/high)
-- businessTopics: деловые темы
-- actionItems: действия к выполнению`;
+ЗАДАЧА: Найти все вопросы адресованные Грачья, которые остались без ответа.
+
+Вернуть JSON анализ:
+{
+  "summary": "Детальная статистика сообщений и вопросов",
+  "unansweredToGracha": ["точный текст каждого неотвеченного вопроса к Грачья"],
+  "identifiedProblems": ["конкретные проблемы с цитатами из сообщений"],
+  "questionsFromGracha": ["вопросы которые задавал Грачья"],
+  "participationStats": "статистика участия в цифрах",
+  "communicationType": "тип общения (деловое/личное)",
+  "responseRequired": true/false,
+  "priority": "high/medium/low"
+}`;
 
         console.log('Running offline detailed analysis with local model qwen');
+        console.log(`Sending prompt to qwen model: ${detailedPrompt.substring(0, 200)}...`);
         
-        // Создаем детальный анализ на основе содержания переписки
+        try {
+          // Отправляем промпт к модели qwen для настоящего AI анализа
+          const qwenResponse = await this.client.chat.completions.create({
+            model: this.config.model,
+            messages: [
+              {
+                role: "system",
+                content: "Ты эксперт по анализу переписок. Анализируй точно и детально, находи конкретные неотвеченные вопросы."
+              },
+              {
+                role: "user", 
+                content: detailedPrompt
+              }
+            ],
+            temperature: 0.3,
+            max_tokens: 2000
+          });
+
+          const qwenResult = qwenResponse.choices[0]?.message?.content;
+          console.log(`Qwen analysis result: ${qwenResult?.substring(0, 300)}...`);
+          
+          if (qwenResult) {
+            const cleanedResult = this.cleanJSONResponse(qwenResult);
+            const parsedResult = JSON.parse(cleanedResult);
+            
+            return {
+              unansweredRequests: parsedResult.unansweredToGracha || [],
+              identifiedProblems: parsedResult.identifiedProblems || [],
+              openQuestions: parsedResult.questionsFromGracha || [],
+              myParticipation: parsedResult.participationStats || "",
+              missedResponses: parsedResult.unansweredToGracha || [],
+              responseRequired: parsedResult.responseRequired || false,
+              priority: parsedResult.priority || "medium",
+              businessTopics: ["AI анализ"],
+              actionItems: parsedResult.unansweredToGracha?.length > 0 ? 
+                [`Ответить на ${parsedResult.unansweredToGracha.length} неотвеченных вопросов`] : 
+                ["Продолжить мониторинг переписки"],
+              summary: parsedResult.summary || `AI анализ переписки "${chatTitle}"`
+            };
+          }
+        } catch (error) {
+          console.log('Qwen analysis failed:', error);
+          console.log('Error details:', JSON.stringify(error, null, 2));
+          console.log('Falling back to JavaScript analysis');
+        }
+        
+        // Fallback JavaScript анализ если qwen недоступен
         const messageTexts = conversationText.split('\n').filter(line => line.trim());
         const participantMessages = messageTexts.filter(msg => msg.includes('Грачья:'));
         const partnerMessages = messageTexts.filter(msg => msg.includes('Сонышко:'));
