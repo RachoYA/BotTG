@@ -17,7 +17,7 @@ export default function PeriodAnalysis() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Получаем список чатов для выбора
+  // Get chats for selection
   const { data: chats = [] } = useQuery({
     queryKey: ["/api/chats"],
     queryFn: () => fetch("/api/chats").then(res => res.json())
@@ -50,11 +50,20 @@ export default function PeriodAnalysis() {
     }
   });
 
-  const handleAnalyzePeriod = () => {
+  const handleStartAnalysis = () => {
     if (!startDate || !endDate) {
       toast({
         title: "Ошибка",
-        description: "Выберите период для анализа",
+        description: "Укажите даты начала и окончания периода",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedChatId) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите чат для анализа",
         variant: "destructive"
       });
       return;
@@ -63,155 +72,183 @@ export default function PeriodAnalysis() {
     analyzePeriodMutation.mutate({
       startDate,
       endDate,
-      chatId: selectedChatId || undefined
+      chatId: selectedChatId
     });
   };
 
-  const getPresetDates = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Анализ периода с полным контекстом
-        </CardTitle>
-        <CardDescription>
-          Новая система анализа переписки с учетом полного контекста для более точного извлечения задач
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Описание улучшений */}
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Ключевые улучшения:</strong>
-            <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
-              <li>Анализ ВСЕЙ переписки за период, а не только новых сообщений</li>
-              <li>Учет хронологии событий и статусов выполнения</li>
-              <li>Проверка упоминаний о выполнении задач в любой части переписки</li>
-              <li>Предотвращение создания задач для уже выполненных поручений</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
-
-        {/* Быстрые пресеты */}
-        <div>
-          <Label className="text-sm font-medium">Быстрый выбор периода</Label>
-          <div className="grid grid-cols-4 gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={() => getPresetDates(1)}>
-              Вчера
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => getPresetDates(3)}>
-              3 дня
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => getPresetDates(7)}>
-              Неделя
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => getPresetDates(14)}>
-              2 недели
-            </Button>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Контекстный анализ переписки
+          </CardTitle>
+          <CardDescription>
+            Анализ переписки за период с выявлением пропущенных ответов и проблем
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start-date">Дата начала</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end-date">Дата окончания</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Выбор периода */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="startDate">Начальная дата</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+          <div className="space-y-2">
+            <Label htmlFor="chat-select">Чат для анализа</Label>
+            <Select value={selectedChatId} onValueChange={setSelectedChatId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите чат для анализа" />
+              </SelectTrigger>
+              <SelectContent>
+                {chats.map((chat: any) => (
+                  <SelectItem key={chat.id} value={chat.chatId}>
+                    {chat.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <Label htmlFor="endDate">Конечная дата</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
 
-        {/* Выбор чата */}
-        <div>
-          <Label htmlFor="chatSelect">Чат (опционально)</Label>
-          <Select value={selectedChatId} onValueChange={setSelectedChatId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Все чаты или выберите конкретный" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Все чаты</SelectItem>
-              {chats.map((chat: any) => (
-                <SelectItem key={chat.id} value={chat.chatId}>
-                  {chat.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <Button 
+            onClick={handleStartAnalysis}
+            disabled={analyzePeriodMutation.isPending}
+            className="w-full"
+          >
+            {analyzePeriodMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Анализируем контекст переписки...
+              </>
+            ) : (
+              <>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Начать контекстный анализ
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
-        {/* Кнопка запуска */}
-        <Button 
-          onClick={handleAnalyzePeriod}
-          disabled={analyzePeriodMutation.isPending || !startDate || !endDate}
-          className="w-full"
-        >
-          {analyzePeriodMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Анализирую переписку...
-            </>
-          ) : (
-            <>
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Запустить анализ с полным контекстом
-            </>
-          )}
-        </Button>
+      {/* Analysis Results */}
+      {analysisResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Результаты контекстного анализа
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Summary */}
+              {analysisResult.analysis?.summary && (
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 mb-2">Общее резюме</h4>
+                  <p className="text-blue-800">{analysisResult.analysis.summary}</p>
+                </div>
+              )}
 
-        {/* Информация о процессе */}
-        {analyzePeriodMutation.isPending && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Выполняется глубокий анализ переписки. Система анализирует всю историю сообщений 
-              за выбранный период для максимально точного извлечения задач.
-            </AlertDescription>
-          </Alert>
-        )}
+              {/* Unanswered Requests */}
+              {analysisResult.analysis?.unansweredRequests?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold flex items-center gap-2 text-red-700">
+                    <AlertCircle className="h-4 w-4" />
+                    Необработанные обращения
+                  </h4>
+                  <div className="space-y-2">
+                    {analysisResult.analysis.unansweredRequests.map((request: string, index: number) => (
+                      <div key={index} className="p-3 bg-red-50 border-l-4 border-red-400 rounded">
+                        <p className="text-red-800">{request}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {/* Результаты */}
-        {analyzePeriodMutation.data && (
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Результаты анализа:</strong>
-              <div className="mt-2 text-sm">
-                {analyzePeriodMutation.data.processedChats && (
-                  <div>Обработано чатов: {analyzePeriodMutation.data.processedChats}</div>
-                )}
-                {analyzePeriodMutation.data.createdTasks && (
-                  <div>Создано задач: {analyzePeriodMutation.data.createdTasks}</div>
-                )}
-                {analyzePeriodMutation.data.foundCompletedTasks && (
-                  <div>Найдено выполненных задач: {analyzePeriodMutation.data.foundCompletedTasks}</div>
-                )}
+              {/* Identified Problems */}
+              {analysisResult.analysis?.identifiedProblems?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold flex items-center gap-2 text-amber-700">
+                    <AlertTriangle className="h-4 w-4" />
+                    Выявленные проблемы
+                  </h4>
+                  <div className="space-y-2">
+                    {analysisResult.analysis.identifiedProblems.map((problem: string, index: number) => (
+                      <div key={index} className="p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
+                        <p className="text-amber-800">{problem}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Open Questions */}
+              {analysisResult.analysis?.openQuestions?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold flex items-center gap-2 text-blue-700">
+                    <Clock className="h-4 w-4" />
+                    Открытые вопросы
+                  </h4>
+                  <div className="space-y-2">
+                    {analysisResult.analysis.openQuestions.map((question: string, index: number) => (
+                      <div key={index} className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                        <p className="text-blue-800">{question}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* My Participation */}
+              {analysisResult.analysis?.myParticipation && (
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h4 className="font-semibold text-green-900 mb-2">Анализ моего участия</h4>
+                  <p className="text-green-800">{analysisResult.analysis.myParticipation}</p>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {analysisResult.processedMessages || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Обработано сообщений</div>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {analysisResult.analysis?.priority || "medium"}
+                  </div>
+                  <div className="text-sm text-blue-600">Приоритет</div>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {analysisResult.analysis?.responseRequired ? "Да" : "Нет"}
+                  </div>
+                  <div className="text-sm text-red-600">Требуется ответ</div>
+                </div>
               </div>
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

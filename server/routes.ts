@@ -53,73 +53,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all tasks
-  app.get("/api/tasks", async (req, res) => {
+  // Get period analyses
+  app.get("/api/period-analysis", async (req, res) => {
     try {
-      const tasks = await storage.getExtractedTasks();
-      res.json(tasks);
+      const analyses = await storage.getPeriodAnalyses();
+      res.json(analyses);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get tasks" });
+      res.status(500).json({ message: "Failed to get period analyses" });
     }
   });
 
-  // Update task status
-  app.patch("/api/tasks/:id/status", async (req, res) => {
+  // Analyze conversation period
+  app.post("/api/conversation/analyze-period", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const { status } = req.body;
+      const { startDate, endDate, chatId } = req.body;
       
-      if (!status || !['new', 'in_progress', 'completed'].includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required" });
       }
 
-      const task = await storage.updateTaskStatus(id, status);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      res.json(task);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update task status" });
-    }
-  });
-
-  // Create task manually
-  app.post("/api/tasks", async (req, res) => {
-    try {
-      const validatedData = insertExtractedTaskSchema.parse(req.body);
-      const task = await storage.createExtractedTask(validatedData);
-      res.json(task);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid task data" });
-    }
-  });
-
-  // Update task status
-  app.patch("/api/tasks/:id/status", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
+      // Run period analysis with conversation context focus
+      const result = await aiService.analyzeConversationPeriod(chatId, new Date(startDate), new Date(endDate));
       
-      const task = await storage.updateTaskStatus(parseInt(id), status);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-      
-      res.json(task);
+      res.json({
+        message: "Контекстный анализ переписки завершен",
+        analysis: result
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to update task" });
+      res.status(500).json({ message: "Failed to analyze conversation period" });
     }
   });
 
-  // Delete task
-  app.delete("/api/tasks/:id", async (req, res) => {
+  // Get recent analyses
+  app.get("/api/period-analysis/recent", async (req, res) => {
     try {
-      const { id } = req.params;
-      await storage.deleteTask(parseInt(id));
-      res.json({ success: true, message: "Task deleted" });
+      const limit = parseInt(req.query.limit as string) || 5;
+      const analyses = await storage.getRecentAnalyses(limit);
+      res.json(analyses);
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete task" });
+      res.status(500).json({ message: "Failed to get recent analyses" });
     }
   });
 
