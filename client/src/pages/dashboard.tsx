@@ -1,255 +1,262 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import Navigation from "@/components/navigation";
 import Sidebar from "@/components/sidebar";
+import PeriodAnalysis from "@/components/period-analysis";
 import DailySummary from "@/components/daily-summary";
-import TasksOverview from "@/components/tasks-overview";
-import ChatMonitoring from "@/components/chat-monitoring";
 import AIInsights from "@/components/ai-insights";
-import QuickActions from "@/components/quick-actions";
-import { Bell, Calendar, Download } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { MessageSquare, Calendar, Users, Brain, AlertTriangle, TrendingUp, CheckCircle } from "lucide-react";
+import { format } from "date-fns";
 
 export default function Dashboard() {
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 7); // По умолчанию неделя назад
-    return date.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
-  const { toast } = useToast();
-
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/dashboard/stats'],
+  // Get dashboard stats
+  const { data: stats = {} } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: () => fetch("/api/dashboard/stats").then(res => res.json()),
+    refetchInterval: 30000
   });
 
-  const processPeriodMutation = useMutation({
-    mutationFn: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
-      const response = await fetch('/api/ai/process-period', {
-        method: 'POST',
-        body: JSON.stringify({ startDate, endDate }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to process period messages');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Обработка завершена",
-        description: `Обработано сообщений: ${data.processedMessages}, создано задач: ${data.createdTasks}, создано саммари: ${data.createdSummaries}`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Ошибка обработки",
-        description: "Не удалось обработать сообщения за указанный период",
-        variant: "destructive",
-      });
-    },
+  // Get recent analyses
+  const { data: recentAnalyses = [] } = useQuery({
+    queryKey: ["/api/period-analysis/recent"],
+    queryFn: () => fetch("/api/period-analysis/recent?limit=3").then(res => res.json())
   });
 
-  const currentDate = new Date().toLocaleDateString('ru-RU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  // Get latest daily summary
+  const { data: latestSummary } = useQuery({
+    queryKey: ["/api/summary/latest"],
+    queryFn: () => fetch("/api/summary/latest").then(res => res.json())
   });
 
-  const handleProcessPeriod = () => {
-    if (!startDate || !endDate) {
-      toast({
-        title: "Ошибка",
-        description: "Выберите начальную и конечную дату",
-        variant: "destructive",
-      });
-      return;
+  // Get recent insights
+  const { data: insights = [] } = useQuery({
+    queryKey: ["/api/insights"],
+    queryFn: () => fetch("/api/insights").then(res => res.json())
+  });
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "bg-red-500";
+      case "medium": return "bg-yellow-500";
+      case "low": return "bg-green-500";
+      default: return "bg-gray-500";
     }
-    
-    if (new Date(startDate) > new Date(endDate)) {
-      toast({
-        title: "Ошибка",
-        description: "Начальная дата должна быть раньше конечной",
-        variant: "destructive",
-      });
-      return;
-    }
+  };
 
-    processPeriodMutation.mutate({ startDate, endDate });
+  const getPriorityText = (priority: string) => {
+    switch (priority) {
+      case "high": return "Высокий";
+      case "medium": return "Средний";
+      case "low": return "Низкий";
+      default: return "Неизвестно";
+    }
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
-              <p className="text-gray-600">Сегодня, {currentDate}</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full"></span>
-              </button>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-success rounded-full"></div>
-                <span className="text-sm font-medium text-success">Подключено к Telegram</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {/* Period Processing Card */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Обработка сообщений за период
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="start-date">Начальная дата</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="end-date">Конечная дата</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    onClick={handleProcessPeriod}
-                    disabled={processPeriodMutation.isPending}
-                    className="w-full"
-                  >
-                    {processPeriodMutation.isPending ? (
-                      <>
-                        <Download className="mr-2 h-4 w-4 animate-spin" />
-                        Обработка...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="mr-2 h-4 w-4" />
-                        Обработать период
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mt-3">
-                Загружает все сообщения за выбранный период и создает задачи для личных чатов, 
-                общие AI-саммари для групповых чатов.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Непрочитанные</p>
-                  <p className="text-3xl font-bold text-accent">
-                    {statsLoading ? '...' : stats?.unreadMessages || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-accent bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-envelope text-accent text-xl"></i>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Требуют внимания</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Срочные задачи</p>
-                  <p className="text-3xl font-bold text-destructive">
-                    {statsLoading ? '...' : stats?.urgentTasks || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-destructive bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-exclamation-triangle text-destructive text-xl"></i>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Требуют внимания</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Активные чаты</p>
-                  <p className="text-3xl font-bold text-primary">
-                    {statsLoading ? '...' : stats?.activeChats || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-comments text-primary text-xl"></i>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Подключено из Telegram</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Завершено</p>
-                  <p className="text-3xl font-bold text-success">
-                    {statsLoading ? '...' : `${stats?.completedTasksPercentage || 0}%`}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-success bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-check-circle text-success text-xl"></i>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">За текущую неделю</p>
-            </div>
+      <main className="flex-1 overflow-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Главная панель</h1>
+            <p className="text-gray-600 mt-2">
+              Обзор активности и результаты контекстного анализа переписки
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content Area */}
-            <div className="lg:col-span-2 space-y-8">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Новые сообщения</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.unreadMessages || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Активные чаты</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.activeChats || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <AlertTriangle className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Требует ответа</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.responseRequiredChats || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Calendar className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Анализов проведено</p>
+                    <p className="text-2xl font-bold text-gray-900">{recentAnalyses.length || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Recent Analysis Results */}
+            <div className="xl:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Последние анализы переписки
+                  </CardTitle>
+                  <CardDescription>
+                    Результаты недавно проведенных контекстных анализов
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {recentAnalyses.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Анализы еще не проводились</p>
+                      <p className="text-sm">Перейдите в раздел "Анализ переписки" для начала работы</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentAnalyses.map((analysis: any) => (
+                        <div key={analysis.id} className="p-4 border rounded-lg">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium">{analysis.chatTitle}</h4>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-white ${getPriorityColor(analysis.priority)}`}
+                                >
+                                  {getPriorityText(analysis.priority)}
+                                </Badge>
+                                {analysis.responseRequired && (
+                                  <Badge variant="destructive">
+                                    Требует ответа
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {format(new Date(analysis.startDate), "dd.MM.yyyy")} - {format(new Date(analysis.endDate), "dd.MM.yyyy")}
+                              </p>
+                              <p className="text-sm text-gray-800 line-clamp-2">
+                                {analysis.summary || "Анализ завершен"}
+                              </p>
+                            </div>
+                            <div className="text-xs text-gray-500 text-right">
+                              <div>{analysis.totalMessages || 0} сообщений</div>
+                              {analysis.unansweredRequests?.length > 0 && (
+                                <div className="text-red-600 mt-1">
+                                  {analysis.unansweredRequests.length} необработанных
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Daily Summary */}
               <DailySummary />
-              <TasksOverview />
             </div>
 
-            {/* Right Sidebar */}
-            <div className="space-y-8">
-              <AIInsights />
-              <QuickActions />
+            {/* Right Sidebar - Quick Actions and Insights */}
+            <div className="space-y-6">
+              {/* Quick Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Быстрый анализ
+                  </CardTitle>
+                  <CardDescription>
+                    Запустите анализ за последние дни
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <PeriodAnalysis />
+                </CardContent>
+              </Card>
+
+              {/* AI Insights Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    AI Инсайты
+                  </CardTitle>
+                  <CardDescription>
+                    Последние автоматические рекомендации
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {insights.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <Brain className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Инсайты еще не сгенерированы</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {insights.slice(0, 3).map((insight: any) => (
+                        <div key={insight.id} className="p-3 border rounded-lg">
+                          <div className="flex items-start justify-between mb-1">
+                            <h5 className="font-medium text-sm">{insight.title}</h5>
+                            {insight.actionRequired && (
+                              <Badge variant="destructive" className="text-xs">
+                                Действие
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            {insight.description}
+                          </p>
+                        </div>
+                      ))}
+                      {insights.length > 3 && (
+                        <Button variant="outline" size="sm" className="w-full">
+                          Показать все инсайты
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
