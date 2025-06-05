@@ -252,7 +252,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "startDate и endDate обязательны" });
       }
 
-      if (chatId) {
+      if (chatId === "all") {
+        // Анализ всех персональных чатов за период
+        await aiService.analyzeAllPrivateChats(new Date(startDate), new Date(endDate));
+        res.json({ 
+          success: true, 
+          message: "Контекстный анализ всех персональных чатов завершен" 
+        });
+      } else if (chatId) {
         // Анализ конкретного чата с полным контекстом
         await aiService.analyzeConversationPeriod(chatId, new Date(startDate), new Date(endDate));
         res.json({ 
@@ -260,15 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Анализ чата ${chatId} с полным контекстом завершен` 
         });
       } else {
-        // Анализ всех чатов за период
-        const result = await aiService.processPeriodMessages(startDate, endDate);
-        res.json({ 
-          success: true, 
-          message: "Анализ периода завершен",
-          processedChats: result.processedChats,
-          createdTasks: result.createdTasks,
-          foundCompletedTasks: result.foundCompletedTasks
-        });
+        return res.status(400).json({ error: "Необходимо выбрать чат для анализа" });
       }
     } catch (error) {
       console.error("Ошибка анализа периода:", error);

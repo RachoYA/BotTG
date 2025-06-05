@@ -130,7 +130,8 @@ export default function PeriodAnalysis() {
                 <SelectValue placeholder="Выберите чат для анализа" />
               </SelectTrigger>
               <SelectContent>
-                {chats.map((chat: any) => (
+                <SelectItem value="all">Все персональные чаты (исключая группы)</SelectItem>
+                {chats.filter((chat: any) => chat.type === 'private').map((chat: any) => (
                   <SelectItem key={chat.id} value={chat.chatId}>
                     {chat.title}
                   </SelectItem>

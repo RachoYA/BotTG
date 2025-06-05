@@ -114,20 +114,22 @@ export class AIService {
 
       const systemPrompt = `Ты - помощник-аналитик для управления коммуникациями. Проанализируй переписку и выдели ключевые управленческие инсайты.
 
+ВАЖНО: Пользователя в системе зовут "Грачья" (может также встречаться как "Грачья Алексаня" или "Racho"). Анализируй обращения именно к этому человеку.
+
 Сосредоточься на:
-1. Необработанные обращения ко мне (запросы, которые требуют моего ответа)
+1. Необработанные обращения к Грачье (запросы, которые требуют его ответа)
 2. Проблемы, выявленные в контексте разговора
 3. Открытые вопросы без ответов
-4. Мое участие в беседе и пропущенные ответы
+4. Участие Грачьи в беседе и пропущенные ответы
 5. Приоритет и необходимость реагирования
 
 Ответ должен быть в JSON формате с полями:
-- unansweredRequests: массив строк с описанием необработанных обращений
+- unansweredRequests: массив строк с описанием необработанных обращений к Грачье
 - identifiedProblems: массив строк с выявленными проблемами
 - openQuestions: массив строк с открытыми вопросами
-- myParticipation: строка с анализом моего участия
-- missedResponses: массив строк с пропущенными ответами
-- responseRequired: boolean - требуется ли мой ответ
+- myParticipation: строка с анализом участия Грачьи
+- missedResponses: массив строк с пропущенными ответами от Грачьи
+- responseRequired: boolean - требуется ли ответ от Грачьи
 - summary: строка с кратким резюме
 - priority: "high", "medium" или "low"`;
 
@@ -244,6 +246,30 @@ ${conversationText.slice(0, 8000)} // Ограничиваем размер дл
         requiresResponse: [],
         keyTopics: []
       };
+    }
+  }
+
+  async analyzeAllPrivateChats(startDate: Date, endDate: Date): Promise<void> {
+    try {
+      console.log(`Analyzing all private chats for period ${startDate.toISOString()} to ${endDate.toISOString()}...`);
+
+      // Получаем все чаты и фильтруем только персональные
+      const allChats = await storage.getTelegramChats();
+      const privateChats = allChats.filter(chat => chat.type === 'private');
+
+      for (const chat of privateChats) {
+        try {
+          await this.analyzeConversationPeriod(chat.chatId, startDate, endDate);
+          console.log(`Analyzed private chat: ${chat.title}`);
+        } catch (error) {
+          console.error(`Error analyzing chat ${chat.title}:`, error);
+        }
+      }
+
+      console.log(`Completed analysis of ${privateChats.length} private chats`);
+    } catch (error) {
+      console.error("Error analyzing all private chats:", error);
+      throw error;
     }
   }
 
