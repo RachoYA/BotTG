@@ -140,12 +140,12 @@ export default function RAGManagement() {
             ) : (
               <>
                 <Database className="mr-2 h-4 w-4" />
-                {ragStats?.totalMessages > 0 ? 'Переинициализировать RAG-систему' : 'Инициализировать RAG-систему'}
+                {((ragStats as any)?.totalMessages || 0) > 0 ? 'Переинициализировать RAG-систему' : 'Инициализировать RAG-систему'}
               </>
             )}
           </Button>
           
-          {ragStats?.totalMessages > 0 && (
+          {((ragStats as any)?.totalMessages || 0) > 0 && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-2 text-green-800">
                 <CheckCircle className="h-4 w-4" />
