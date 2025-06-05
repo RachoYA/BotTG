@@ -3,9 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, MessageCircle, Brain, Database, Calendar } from "lucide-react";
 import MobileSidebar from "@/components/mobile-sidebar";
 import TelegramSetup from "@/components/telegram-setup";
-import AIModelTesting from "@/components/ai-model-testing";
 import LocalAISetup from "@/components/local-ai-setup";
-import DatabaseManagement from "@/components/database-management";
 import PeriodAnalysis from "@/components/period-analysis";
 import RAGManagement from "@/components/rag-management";
 
@@ -31,21 +29,16 @@ export default function SettingsPage() {
           <div className="max-w-4xl mx-auto">
 
       <Tabs defaultValue="telegram" className="space-y-4 lg:space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
           <TabsTrigger value="telegram" className="flex items-center mobile-text-sm">
             <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
             <span className="hidden lg:inline">Telegram</span>
             <span className="lg:hidden">TG</span>
           </TabsTrigger>
-          <TabsTrigger value="ai" className="flex items-center mobile-text-sm">
-            <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-            <span className="hidden lg:inline">AI модель</span>
-            <span className="lg:hidden">AI</span>
-          </TabsTrigger>
           <TabsTrigger value="local-ai" className="flex items-center mobile-text-sm">
             <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
             <span className="hidden lg:inline">Локальный AI</span>
-            <span className="lg:hidden">Local</span>
+            <span className="lg:hidden">AI</span>
           </TabsTrigger>
           <TabsTrigger value="rag" className="flex items-center mobile-text-sm">
             <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
@@ -57,19 +50,10 @@ export default function SettingsPage() {
             <span className="hidden lg:inline">Анализ периодов</span>
             <span className="lg:hidden">Анализ</span>
           </TabsTrigger>
-          <TabsTrigger value="database" className="flex items-center mobile-text-sm">
-            <Database className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-            <span className="hidden lg:inline">База данных</span>
-            <span className="lg:hidden">БД</span>
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="telegram">
           <TelegramSetup />
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AIModelTesting />
         </TabsContent>
 
         <TabsContent value="local-ai">
@@ -82,10 +66,6 @@ export default function SettingsPage() {
 
         <TabsContent value="analysis">
           <PeriodAnalysis />
-        </TabsContent>
-
-        <TabsContent value="database">
-          <DatabaseManagement />
         </TabsContent>
       </Tabs>
           </div>

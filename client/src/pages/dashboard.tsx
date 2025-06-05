@@ -71,15 +71,32 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-4 lg:mb-6">
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <MessageSquare className="h-6 w-6 text-blue-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <MessageSquare className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Новые сообщения</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.unreadMessages || 0}</p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Новые сообщения</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.unreadMessages || 0}</p>
-                  </div>
+                  {stats.unreadMessages > 100 && (
+                    <Badge variant="destructive" className="text-xs">
+                      Много
+                    </Badge>
+                  )}
                 </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      (stats.unreadMessages || 0) > 1000 ? 'bg-red-500' : 
+                      (stats.unreadMessages || 0) > 500 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, ((2000 - (stats.unreadMessages || 0)) / 2000) * 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Прогресс обработки</p>
               </CardContent>
             </Card>
 
@@ -99,14 +116,35 @@ export default function Dashboard() {
 
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <AlertTriangle className="h-6 w-6 text-amber-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className={`p-2 rounded-lg ${
+                      (stats.responseRequiredChats || 0) > 0 ? 'bg-red-100' : 'bg-green-100'
+                    }`}>
+                      <AlertTriangle className={`h-6 w-6 ${
+                        (stats.responseRequiredChats || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                      }`} />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Требует ответа</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.responseRequiredChats || 0}</p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Требует ответа</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.responseRequiredChats || 0}</p>
-                  </div>
+                  {(stats.responseRequiredChats || 0) > 0 && (
+                    <Badge variant="destructive" className="text-xs animate-pulse">
+                      Срочно
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center text-xs">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    (stats.responseRequiredChats || 0) > 0 ? 'bg-red-500' : 'bg-green-500'
+                  }`}></div>
+                  <span className={
+                    (stats.responseRequiredChats || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                  }>
+                    {(stats.responseRequiredChats || 0) > 0 ? 'Требует внимания' : 'Все актуально'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
