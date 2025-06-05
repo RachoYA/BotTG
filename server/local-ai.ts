@@ -411,12 +411,16 @@ ${conversationText}
             "Прямых неотвеченных вопросов не найдено"
           ],
           identifiedProblems: problemIndicators.map(msg => {
-            const parts = msg.split(':');
-            return parts.length > 1 ? parts[1].trim().substring(0, 100) : msg.substring(0, 100);
+            const parts = msg.split('] ');
+            const content = parts.length > 1 ? parts[1] : msg;
+            const textPart = content.split(':');
+            return textPart.length > 1 ? `${textPart[0]}: ${textPart[1].trim().substring(0, 80)}` : content.substring(0, 80);
           }),
           openQuestions: myQuestions.map(q => {
-            const parts = q.split(':');
-            return parts.length > 1 ? parts[1].trim().substring(0, 100) : q.substring(0, 100);
+            const parts = q.split('] ');
+            const content = parts.length > 1 ? parts[1] : q;
+            const textPart = content.split(':');
+            return textPart.length > 1 ? textPart[1].trim().substring(0, 80) : content.substring(0, 80);
           }),
           myParticipation: `Активность: ${participantMessages.length}/${messageTexts.length} сообщений (${Math.round(participantMessages.length/messageTexts.length*100)}%). Задано вопросов: ${myQuestions.length}. ${hasEmotions ? 'Эмоциональное общение.' : 'Деловое общение.'}`,
           missedResponses: unansweredToGracha,
