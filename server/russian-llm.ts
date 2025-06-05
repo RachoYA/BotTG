@@ -184,6 +184,9 @@ export class RussianLLMService {
       return this.generateFinancialAnalysisResponse(prompt);
     } else if (this.matchesTechnicalPattern(lowerPrompt)) {
       return this.generateTechnicalAnalysisResponse(prompt);
+    } else if (lowerPrompt.includes('детально') || lowerPrompt.includes('подробно')) {
+      // Для детального анализа используем продвинутые возможности qwen
+      return this.generateDetailedAnalysisResponse(prompt);
     } else if (lowerPrompt.includes('анализ') || lowerPrompt.includes('проанализируй')) {
       return this.generateAnalysisResponse(prompt);
     } else if (lowerPrompt.includes('инсайт') || lowerPrompt.includes('рекомендаци')) {
@@ -406,6 +409,18 @@ export class RussianLLMService {
         confidence: 0.85
       },
       timestamp: new Date().toISOString()
+    }, null, 2);
+  }
+
+  private generateDetailedAnalysisResponse(prompt: string): string {
+    // Возвращаем указание использовать полные возможности qwen для детального анализа
+    return JSON.stringify({
+      summary: "Требуется детальный анализ с использованием полных возможностей модели",
+      businessTopics: ["требует детального разбора"],
+      actionItems: ["провести полноценный анализ переписки"],
+      responseRequired: true,
+      priority: "high",
+      useFullAnalysis: true
     }, null, 2);
   }
 

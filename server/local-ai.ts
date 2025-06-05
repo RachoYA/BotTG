@@ -289,6 +289,10 @@ Respond with JSON containing:
   "financialTopics": ["финансовые аспекты"]
 }`;
 
+    console.log(`Analyzing ${messageLimit} messages out of ${messages.length} total for chat: ${chatTitle}`);
+    console.log(`Conversation text length: ${conversationText.length} characters`);
+    console.log(`First 200 chars of conversation: ${conversationText.substring(0, 200)}...`);
+
     try {
       const response = await this.generateChatCompletion([
         {
@@ -297,15 +301,20 @@ Respond with JSON containing:
         },
         {
           role: "user",
-          content: `Chat: ${chatTitle}\n\nConversation:\n${conversationText}`
+          content: `Chat: ${chatTitle}\n\nAnalyze these ${messageLimit} messages:\n\n${conversationText}`
         }
       ], {
         responseFormat: { type: "json_object" },
-        maxTokens: 1000
+        maxTokens: 1500
       });
 
+      console.log(`Raw model response: ${response.substring(0, 300)}...`);
+      
       const cleanResponse = this.cleanJSONResponse(response);
+      console.log(`Cleaned JSON response: ${cleanResponse.substring(0, 300)}...`);
+      
       const result = JSON.parse(cleanResponse);
+      console.log(`Parsed result summary: ${result.summary}`);
       
       // Ensure all required fields exist
       return {
