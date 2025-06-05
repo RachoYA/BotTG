@@ -1,7 +1,7 @@
 import { pipeline, env } from '@xenova/transformers';
 
-// Отключаем удаленные модели, используем только локальные
-env.allowRemoteModels = false;
+// Разрешаем загрузку модели для улучшенного анализа
+env.allowRemoteModels = true;
 env.allowLocalModels = true;
 
 interface OfflineAnalysisResult {
@@ -51,18 +51,28 @@ class OfflineAIAnalyzer {
     const questionsToGracha = questionMessages.filter(msg => !msg.includes('Грачья:'));
     const questionsFromGracha = questionMessages.filter(msg => msg.includes('Грачья:'));
 
-    // Анализируем неотвеченные вопросы к Грачья
+    // Контекстный анализ неотвеченных вопросов к Грачья
     const unansweredToGracha: string[] = [];
     
     for (const question of questionsToGracha) {
       const questionIndex = messageTexts.indexOf(question);
-      const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 10);
-      const hasAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
+      const questionText = this.extractQuestionText(question);
       
-      if (!hasAnswer) {
-        const questionText = this.extractQuestionText(question);
-        if (questionText && questionText.length > 5) {
-          unansweredToGracha.push(questionText);
+      if (questionText && questionText.length > 5) {
+        // Проверяем содержит ли сам вопрос ответ (риторический вопрос)
+        const isRhetoricalQuestion = this.isRhetoricalQuestion(questionText, question);
+        
+        if (!isRhetoricalQuestion) {
+          // Ищем ответ от Грачья в следующих 15 сообщениях
+          const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 16);
+          const hasDirectAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
+          
+          // Дополнительная проверка: есть ли тематически связанный ответ
+          const hasContextualAnswer = this.hasContextualAnswer(questionText, subsequentMessages);
+          
+          if (!hasDirectAnswer && !hasContextualAnswer) {
+            unansweredToGracha.push(questionText);
+          }
         }
       }
     }
@@ -130,6 +140,58 @@ class OfflineAIAnalyzer {
       }
     }
     return message.substring(0, 100);
+  }
+
+  private isRhetoricalQuestion(questionText: string, fullMessage: string): boolean {
+    // Проверяем риторические вопросы с ответом в том же сообщении
+    const rhetoricalPatterns = [
+      /можно.*?\?\s*(нет|да)/i,
+      /\?\s*(нет|да)\./i,
+      /\?\s*(конечно|очевидно|ясно)/i,
+      /\?\s*мне нужно/i,
+      /\?\s*я считаю/i,
+      /\?\s*думаю/i
+    ];
+    
+    const combinedText = questionText + ' ' + fullMessage;
+    return rhetoricalPatterns.some(pattern => pattern.test(combinedText));
+  }
+
+  private hasContextualAnswer(questionText: string, subsequentMessages: string[]): boolean {
+    // Извлекаем ключевые слова из вопроса
+    const questionKeywords = this.extractKeywords(questionText);
+    
+    // Ищем тематически связанные ответы в последующих сообщениях
+    for (const message of subsequentMessages) {
+      if (message.includes('Грачья:')) {
+        const messageContent = this.extractMessageContent(message);
+        const messageKeywords = this.extractKeywords(messageContent);
+        
+        // Проверяем пересечение ключевых слов
+        const commonKeywords = questionKeywords.filter(kw => 
+          messageKeywords.some(mk => mk.includes(kw) || kw.includes(mk))
+        );
+        
+        // Если есть совпадение ключевых слов и сообщение достаточно длинное
+        if (commonKeywords.length > 0 && messageContent.length > 20) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  private extractKeywords(text: string): string[] {
+    // Удаляем знаки препинания и разбиваем на слова
+    const words = text.toLowerCase()
+      .replace(/[^\wа-яё\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3);
+    
+    // Убираем служебные слова
+    const stopWords = ['что', 'как', 'где', 'когда', 'почему', 'который', 'которая', 'можно', 'нужно', 'есть', 'была', 'будет', 'этот', 'тот'];
+    return words.filter(word => !stopWords.includes(word));
   }
 
   private identifyBusinessTopics(messageTexts: string[]): string[] {
