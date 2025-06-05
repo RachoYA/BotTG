@@ -6,6 +6,7 @@ import TelegramSetup from "@/components/telegram-setup";
 import LocalAISetup from "@/components/local-ai-setup";
 import PeriodAnalysis from "@/components/period-analysis";
 import RAGManagement from "@/components/rag-management";
+import PromptTraining from "@/components/prompt-training";
 
 export default function SettingsPage() {
   return (
@@ -29,7 +30,7 @@ export default function SettingsPage() {
           <div className="max-w-4xl mx-auto">
 
       <Tabs defaultValue="telegram" className="space-y-4 lg:space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
           <TabsTrigger value="telegram" className="flex items-center mobile-text-sm">
             <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
             <span className="hidden lg:inline">Telegram</span>
@@ -40,8 +41,13 @@ export default function SettingsPage() {
             <span className="hidden lg:inline">Локальный AI</span>
             <span className="lg:hidden">AI</span>
           </TabsTrigger>
-          <TabsTrigger value="rag" className="flex items-center mobile-text-sm">
+          <TabsTrigger value="training" className="flex items-center mobile-text-sm">
             <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">Обучение</span>
+            <span className="lg:hidden">Train</span>
+          </TabsTrigger>
+          <TabsTrigger value="rag" className="flex items-center mobile-text-sm">
+            <Database className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
             <span className="hidden lg:inline">RAG система</span>
             <span className="lg:hidden">RAG</span>
           </TabsTrigger>
@@ -58,6 +64,10 @@ export default function SettingsPage() {
 
         <TabsContent value="local-ai">
           <LocalAISetup />
+        </TabsContent>
+
+        <TabsContent value="training">
+          <PromptTraining />
         </TabsContent>
 
         <TabsContent value="rag">

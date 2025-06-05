@@ -650,5 +650,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     process.exit(0);
   });
 
+  // Training and message analysis endpoints
+  app.get("/api/telegram/message-stats", async (req, res) => {
+    try {
+      const messages = await storage.getTelegramMessages();
+      const grachaMessages = messages.filter(msg => msg.senderName === 'Грачья');
+      const uniqueChats = new Set(messages.map(msg => msg.chatId)).size;
+      
+      res.json({
+        totalMessages: messages.length,
+        grachaMessages: grachaMessages.length,
+        uniqueChats: uniqueChats,
+        dateRange: {
+          earliest: messages.length > 0 ? messages[0].timestamp : null,
+          latest: messages.length > 0 ? messages[messages.length - 1].timestamp : null
+        }
+      });
+    } catch (error: any) {
+      console.error("Message stats error:", error);
+      res.status(500).json({ error: "Failed to get message stats" });
+    }
+  });
+
+  app.post("/api/training/analyze-messages", async (req, res) => {
+    try {
+      const messages = await storage.getTelegramMessages();
+      const grachaMessages = messages.filter(msg => 
+        msg.senderName === 'Грачья' && 
+        msg.text && 
+        msg.text.length > 5
+      );
+
+      // Анализ паттернов сообщений
+      const patterns = {
+        financial: grachaMessages.filter(msg => 
+          msg.text?.toLowerCase().includes('млн') ||
+          msg.text?.toLowerCase().includes('поступлени') ||
+          msg.text?.toLowerCase().includes('налог')
+        ).length,
+        technical: grachaMessages.filter(msg => 
+          msg.text?.toLowerCase().includes('гпт') ||
+          msg.text?.toLowerCase().includes('шарпе') ||
+          msg.text?.toLowerCase().includes('разработ')
+        ).length,
+        team: grachaMessages.filter(msg => 
+          ['роман', 'катя', 'мария', 'алексей', 'иван'].some(name => 
+            msg.text?.toLowerCase().includes(name)
+          )
+        ).length
+      };
+
+      res.json({
+        success: true,
+        totalAnalyzed: grachaMessages.length,
+        patterns: patterns,
+        sampleMessages: grachaMessages.slice(0, 10).map(msg => ({
+          text: msg.text,
+          timestamp: msg.timestamp,
+          chatId: msg.chatId
+        }))
+      });
+    } catch (error: any) {
+      console.error("Training analysis error:", error);
+      res.status(500).json({ error: "Failed to analyze messages for training" });
+    }
+  });
+
   return httpServer;
 }
