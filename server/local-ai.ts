@@ -363,36 +363,73 @@ ${conversationText}
         const participantMessages = messageTexts.filter(msg => msg.includes('Грачья:'));
         const partnerMessages = messageTexts.filter(msg => msg.includes('Сонышко:'));
         
-        // Анализируем содержание сообщений
-        const hasQuestions = messageTexts.some(msg => msg.includes('?'));
-        const hasEmotions = messageTexts.some(msg => /[😘😂🥰💘🫶😆]/.test(msg));
-        const hasConcerns = messageTexts.some(msg => 
-          msg.includes('устал') || msg.includes('болит') || msg.includes('проблем')
+        // Детальный анализ содержания сообщений
+        const questionMessages = messageTexts.filter(msg => msg.includes('?'));
+        const myQuestions = questionMessages.filter(msg => msg.includes('Грачья:'));
+        const partnerQuestions = questionMessages.filter(msg => msg.includes('Сонышко:') || !msg.includes('Грачья:'));
+        
+        // Поиск неотвеченных вопросов к Грачья
+        const unansweredToGracha: string[] = [];
+        partnerQuestions.forEach(question => {
+          const questionText = question.split(':')[1]?.trim();
+          if (questionText) {
+            // Проверяем есть ли ответ в последующих сообщениях
+            const questionIndex = messageTexts.indexOf(question);
+            const subsequentMessages = messageTexts.slice(questionIndex + 1, questionIndex + 5);
+            const hasAnswer = subsequentMessages.some(msg => msg.includes('Грачья:'));
+            
+            if (!hasAnswer) {
+              unansweredToGracha.push(questionText);
+            }
+          }
+        });
+        
+        // Анализ проблем и тем
+        const problemIndicators = messageTexts.filter(msg => 
+          msg.includes('устал') || msg.includes('болит') || msg.includes('проблем') ||
+          msg.includes('сложно') || msg.includes('не могу') || msg.includes('помочь')
         );
         
+        const businessTopics = [];
+        if (messageTexts.some(msg => msg.includes('работ') || msg.includes('проект'))) {
+          businessTopics.push('рабочие вопросы');
+        }
+        if (messageTexts.some(msg => msg.includes('встреч') || msg.includes('план'))) {
+          businessTopics.push('планирование встреч');
+        }
+        if (messageTexts.some(msg => msg.includes('самочувств') || msg.includes('здоровь'))) {
+          businessTopics.push('вопросы здоровья');
+        }
+        
+        const hasEmotions = messageTexts.some(msg => /[😘😂🥰💘🫶😆]/.test(msg));
+        const hasConcerns = problemIndicators.length > 0;
+        const hasQuestions = questionMessages.length > 0;
+        
         const detailedResult = {
-          summary: `Детальный анализ личной переписки "${chatTitle}" за выбранный период. Обработано ${messageLimit} сообщений между партнерами. Переписка носит личный характер с эмоциональной составляющей.`,
-          unansweredRequests: hasQuestions ? [
-            "Вопросы о самочувствии и планах",
-            "Уточнения о времени и встречах"
-          ] : [],
-          identifiedProblems: hasConcerns ? [
-            "Упоминания усталости и самочувствия",
-            "Необходимость координации планов"
-          ] : [],
-          openQuestions: hasQuestions ? [
-            "Планы на вечер и встречи",
-            "Вопросы о самочувствии партнера"
-          ] : [],
-          myParticipation: `Активное участие в диалоге (${participantMessages.length} сообщений из ${messageTexts.length}). Проявление заботы и внимания к партнеру.`,
-          missedResponses: [],
-          responseRequired: hasQuestions,
-          priority: hasConcerns ? "high" : "medium",
-          businessTopics: ["личные отношения", "координация планов", "взаимная поддержка"],
-          actionItems: [
-            "Ответить на открытые вопросы партнера",
-            "Уточнить планы и договоренности",
-            "Продолжить поддерживающее общение"
+          summary: `Детальный анализ переписки "${chatTitle}": обработано ${messageLimit} сообщений (${participantMessages.length} от Грачья, ${partnerMessages.length} от партнера). Найдено ${questionMessages.length} вопросов, из них ${unansweredToGracha.length} неотвеченных к Грачья.`,
+          unansweredRequests: unansweredToGracha.length > 0 ? unansweredToGracha : [
+            "Прямых неотвеченных вопросов не найдено"
+          ],
+          identifiedProblems: problemIndicators.map(msg => {
+            const parts = msg.split(':');
+            return parts.length > 1 ? parts[1].trim().substring(0, 100) : msg.substring(0, 100);
+          }),
+          openQuestions: myQuestions.map(q => {
+            const parts = q.split(':');
+            return parts.length > 1 ? parts[1].trim().substring(0, 100) : q.substring(0, 100);
+          }),
+          myParticipation: `Активность: ${participantMessages.length}/${messageTexts.length} сообщений (${Math.round(participantMessages.length/messageTexts.length*100)}%). Задано вопросов: ${myQuestions.length}. ${hasEmotions ? 'Эмоциональное общение.' : 'Деловое общение.'}`,
+          missedResponses: unansweredToGracha,
+          responseRequired: unansweredToGracha.length > 0,
+          priority: unansweredToGracha.length > 0 ? "high" : (hasConcerns ? "medium" : "low"),
+          businessTopics: businessTopics.length > 0 ? businessTopics : ["личное общение"],
+          actionItems: unansweredToGracha.length > 0 ? [
+            `Ответить на ${unansweredToGracha.length} неотвеченных вопросов`,
+            "Уточнить важные детали в переписке",
+            "Поддержать диалог"
+          ] : [
+            "Продолжить наблюдение за перепиской",
+            "Поддерживать активное общение"
           ]
         };
         console.log(`Detailed analysis summary: ${detailedResult.summary}`);

@@ -188,7 +188,8 @@ export class RussianLLMService {
       // Для детального анализа используем продвинутые возможности qwen
       return this.generateDetailedAnalysisResponse(prompt);
     } else if (lowerPrompt.includes('анализ') || lowerPrompt.includes('проанализируй')) {
-      return this.generateAnalysisResponse(prompt);
+      // Всегда возвращаем флаг для детального анализа
+      return this.generateDetailedAnalysisResponse(prompt);
     } else if (lowerPrompt.includes('инсайт') || lowerPrompt.includes('рекомендаци')) {
       return this.generateInsightResponse(prompt);
     } else if (lowerPrompt.includes('резюме') || lowerPrompt.includes('краткое')) {
