@@ -30,17 +30,29 @@ export const telegramMessages = pgTable("telegram_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const extractedTasks = pgTable("extracted_tasks", {
+// Новая система контекстного анализа переписки
+export const periodAnalysis = pgTable("period_analysis", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  urgency: text("urgency").notNull().default('medium'), // 'high', 'medium', 'low'
-  status: text("status").notNull().default('pending'), // 'pending', 'in_progress', 'completed'
-  deadline: text("deadline"), // Store as string for simplicity
-  chatId: text("chat_id"),
-  messageId: text("message_id"),
-  extractedAt: timestamp("extracted_at").defaultNow(),
-  completedAt: timestamp("completed_at"),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  chatId: text("chat_id").notNull(),
+  chatTitle: text("chat_title"),
+  
+  // Ключевые показатели
+  totalMessages: integer("total_messages").default(0),
+  unansweredRequests: text("unanswered_requests").array(), // JSON массив с деталями
+  identifiedProblems: text("identified_problems").array(),
+  openQuestions: text("open_questions").array(),
+  
+  // Анализ участия
+  myParticipation: text("my_participation"), // Анализ моего участия
+  missedResponses: text("missed_responses").array(),
+  responseRequired: boolean("response_required").default(false),
+  
+  // Общий анализ
+  summary: text("summary"),
+  priority: text("priority").default("medium"), // high, medium, low
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const dailySummaries = pgTable("daily_summaries", {
@@ -71,10 +83,9 @@ export const insertTelegramMessageSchema = createInsertSchema(telegramMessages).
   createdAt: true,
 });
 
-export const insertExtractedTaskSchema = createInsertSchema(extractedTasks).omit({
+export const insertPeriodAnalysisSchema = createInsertSchema(periodAnalysis).omit({
   id: true,
-  extractedAt: true,
-  completedAt: true,
+  createdAt: true,
 });
 
 export const insertDailySummarySchema = createInsertSchema(dailySummaries).omit({
@@ -102,8 +113,8 @@ export type InsertTelegramChat = z.infer<typeof insertTelegramChatSchema>;
 export type TelegramMessage = typeof telegramMessages.$inferSelect;
 export type InsertTelegramMessage = z.infer<typeof insertTelegramMessageSchema>;
 
-export type ExtractedTask = typeof extractedTasks.$inferSelect;
-export type InsertExtractedTask = z.infer<typeof insertExtractedTaskSchema>;
+export type PeriodAnalysis = typeof periodAnalysis.$inferSelect;
+export type InsertPeriodAnalysis = z.infer<typeof insertPeriodAnalysisSchema>;
 
 export type DailySummary = typeof dailySummaries.$inferSelect;
 export type InsertDailySummary = z.infer<typeof insertDailySummarySchema>;

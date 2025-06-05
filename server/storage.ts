@@ -2,7 +2,7 @@ import {
   users,
   telegramChats,
   telegramMessages,
-  extractedTasks,
+  periodAnalysis,
   dailySummaries,
   aiInsights,
   type User,
@@ -11,8 +11,8 @@ import {
   type InsertTelegramChat,
   type TelegramMessage,
   type InsertTelegramMessage,
-  type ExtractedTask,
-  type InsertExtractedTask,
+  type PeriodAnalysis,
+  type InsertPeriodAnalysis,
   type DailySummary,
   type InsertDailySummary,
   type AiInsight,
@@ -40,13 +40,11 @@ export interface IStorage {
   createTelegramMessage(message: InsertTelegramMessage): Promise<TelegramMessage>;
   markMessageAsProcessed(id: number): Promise<void>;
 
-  // Extracted Tasks
-  getExtractedTasks(): Promise<ExtractedTask[]>;
-  getTasksByStatus(status: string): Promise<ExtractedTask[]>;
-  getUrgentTasks(): Promise<ExtractedTask[]>;
-  createExtractedTask(task: InsertExtractedTask): Promise<ExtractedTask>;
-  updateTaskStatus(id: number, status: string): Promise<ExtractedTask | undefined>;
-  deleteTask(id: number): Promise<void>;
+  // Period Analysis
+  getPeriodAnalyses(): Promise<PeriodAnalysis[]>;
+  getPeriodAnalysisByPeriod(startDate: string, endDate: string, chatId?: string): Promise<PeriodAnalysis[]>;
+  createPeriodAnalysis(analysis: InsertPeriodAnalysis): Promise<PeriodAnalysis>;
+  getRecentAnalyses(limit?: number): Promise<PeriodAnalysis[]>;
 
   // Daily Summaries
   getDailySummary(date: string): Promise<DailySummary | undefined>;
@@ -61,9 +59,9 @@ export interface IStorage {
   // Dashboard Stats
   getDashboardStats(): Promise<{
     unreadMessages: number;
-    urgentTasks: number;
+    pendingAnalyses: number;
     activeChats: number;
-    completedTasksPercentage: number;
+    responseRequiredChats: number;
   }>;
 }
 

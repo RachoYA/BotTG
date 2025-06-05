@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Calendar, MessageSquare, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Calendar, MessageSquare, CheckCircle, AlertTriangle, Clock, AlertCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PeriodAnalysis() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedChatId, setSelectedChatId] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -25,17 +25,20 @@ export default function PeriodAnalysis() {
 
   const analyzePeriodMutation = useMutation({
     mutationFn: async (data: { startDate: string; endDate: string; chatId?: string }) => {
-      return apiRequest("/api/ai/analyze-period", {
+      const response = await fetch("/api/conversation/analyze-period", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
+      if (!response.ok) throw new Error("Ошибка анализа");
+      return response.json();
     },
     onSuccess: (data) => {
+      setAnalysisResult(data);
       toast({
         title: "Анализ завершен",
-        description: data.message
+        description: "Контекстный анализ переписки выполнен успешно"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error: any) => {
