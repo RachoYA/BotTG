@@ -158,11 +158,19 @@ ${conversationText}
   private async getMessagesForPeriod(chatId: string, start: Date, end: Date): Promise<any[]> {
     try {
       const allMessages = await storage.getTelegramMessages(chatId);
+      console.log(`Found ${allMessages.length} total messages for chat ${chatId}`);
       
-      return allMessages.filter(msg => {
+      const filteredMessages = allMessages.filter(msg => {
         const msgDate = new Date(msg.timestamp);
-        return msgDate >= start && msgDate <= end;
+        const inPeriod = msgDate >= start && msgDate <= end;
+        if (inPeriod) {
+          console.log(`Message in period: ${msgDate.toISOString()} - ${msg.text?.substring(0, 50)}...`);
+        }
+        return inPeriod;
       });
+      
+      console.log(`Filtered ${filteredMessages.length} messages for period ${start.toISOString()} to ${end.toISOString()}`);
+      return filteredMessages;
     } catch (error) {
       console.error("Error getting messages for period:", error);
       return [];
