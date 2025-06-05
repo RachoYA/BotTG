@@ -9,16 +9,6 @@ import { russianLLM } from "./russian-llm.js";
 import { insertTelegramChatSchema, insertPeriodAnalysisSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Start services
-  schedulerService.start();
-  
-  // Initialize Russian LLM service
-  try {
-    await russianLLM.initialize();
-    console.log('Russian LLM service started successfully');
-  } catch (error) {
-    console.error('Failed to start Russian LLM service:', error);
-  }
 
   // Local AI management routes
   app.get("/api/ai/local/status", async (req, res) => {

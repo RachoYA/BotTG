@@ -35,12 +35,10 @@ export class RussianLLMService {
       const net = await import('net');
       const testServer = net.createServer();
       await new Promise((resolve, reject) => {
-        testServer.listen(this.config.port, (err: any) => {
-          if (err) reject(err);
-          else {
-            testServer.close(() => resolve(true));
-          }
+        testServer.listen(this.config.port, () => {
+          testServer.close(() => resolve(true));
         });
+        testServer.on('error', reject);
       });
     } catch (error: any) {
       if (error.code === 'EADDRINUSE') {

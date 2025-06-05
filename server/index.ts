@@ -48,6 +48,14 @@ app.use((req, res, next) => {
   }
 
   const server = await registerRoutes(app);
+  
+  // Start the scheduler service
+  try {
+    schedulerService.start();
+    console.log('Scheduler service started successfully');
+  } catch (error) {
+    console.error('Failed to start scheduler service:', error);
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
