@@ -69,9 +69,16 @@ export default function PeriodAnalysis() {
       return;
     }
 
+    // Устанавливаем правильные временные диапазоны
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0); // Начало дня
+    
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999); // Конец дня
+
     analyzePeriodMutation.mutate({
-      startDate,
-      endDate,
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString(),
       chatId: selectedChatId
     });
   };

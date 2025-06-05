@@ -257,7 +257,10 @@ export class TelegramService {
   }
 
   async loadMessages(chatId: string, limit: number = 20): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !chatId || chatId === 'undefined') {
+      console.error(`Invalid chatId: ${chatId}`);
+      return;
+    }
 
     try {
       // Получаем только последние сообщения из конкретного чата
@@ -268,7 +271,7 @@ export class TelegramService {
       let newMessagesCount = 0;
 
       for (const message of messages) {
-        if (!message.text) continue;
+        if (!message.text || !message.id) continue;
 
         // Проверяем, нет ли уже этого сообщения в базе
         const existingMessages = await storage.getTelegramMessages(chatId, 1);
@@ -281,8 +284,8 @@ export class TelegramService {
         const sender = message.sender as any;
         const senderName = sender?.firstName || sender?.username || "Unknown";
         const insertMessage: InsertTelegramMessage = {
-          messageId: message.id?.toString() || "",
-          chatId,
+          messageId: message.id.toString(),
+          chatId: chatId,
           senderId: message.senderId?.toString() || null,
           senderName,
           text: message.text,
