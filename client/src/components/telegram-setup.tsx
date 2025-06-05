@@ -344,11 +344,7 @@ export default function TelegramSetup() {
             Настройки API
           </h4>
           <div className="text-sm text-gray-600 space-y-1">
-            <p><strong>API ID:</strong> 24788533 ✓</p>
-            <p><strong>API Hash:</strong> 3a5e530327b9e7e8e90b54c6ab0259a1 ✓</p>
-            <p className="text-xs text-gray-500 mt-2">
-              API ключи настроены и готовы к использованию
-            </p>
+            <p>API ключи загружены из конфигурации.</p>
           </div>
         </div>
 
