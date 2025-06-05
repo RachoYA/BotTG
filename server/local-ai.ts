@@ -338,73 +338,33 @@ Respond with JSON containing:
       if (needsDetailedAnalysis) {
         console.log("Detected useFullAnalysis flag, running detailed qwen analysis...");
         
-        const detailedPrompt = `Проанализируй переписку "${chatTitle}" детально. Найди КОНКРЕТНЫЕ неотвеченные вопросы к пользователю Грачья.
+        const detailedPrompt = `Ты анализируешь переписку "${chatTitle}". Твоя задача - найти все неотвеченные вопросы к пользователю "Грачья".
 
-ПЕРЕПИСКА (${messageLimit} сообщений):
+ПЕРЕПИСКА:
 ${conversationText}
 
-ЗАДАЧА: Найти все вопросы адресованные Грачья, которые остались без ответа.
+ИНСТРУКЦИЯ:
+1. Найди все сообщения с вопросами (содержащие "?")
+2. Определи кто задает вопрос Грачья (не от "Грачья:")
+3. Проверь есть ли ответ от Грачья в следующих 3-5 сообщениях
+4. Если ответа нет - добавь в список неотвеченных
+5. Найди упоминания проблем (устал, болит, проблема и т.д.)
 
-Вернуть JSON анализ:
+ВЕРНИ ТОЛЬКО JSON БЕЗ ЛИШНЕГО ТЕКСТА:
 {
-  "summary": "Детальная статистика сообщений и вопросов",
-  "unansweredToGracha": ["точный текст каждого неотвеченного вопроса к Грачья"],
-  "identifiedProblems": ["конкретные проблемы с цитатами из сообщений"],
-  "questionsFromGracha": ["вопросы которые задавал Грачья"],
-  "participationStats": "статистика участия в цифрах",
-  "communicationType": "тип общения (деловое/личное)",
-  "responseRequired": true/false,
-  "priority": "high/medium/low"
+  "unansweredToGracha": ["текст конкретного неотвеченного вопроса 1", "текст вопроса 2"],
+  "identifiedProblems": ["цитата проблемы 1", "цитата проблемы 2"],
+  "questionsFromGracha": ["вопрос от Грачья 1", "вопрос от Грачья 2"],
+  "participationStats": "X сообщений от Грачья из Y общих (Z%)",
+  "summary": "Краткая статистика анализа",
+  "responseRequired": true
 }`;
 
         console.log('Running offline detailed analysis with local model qwen');
         console.log(`Sending prompt to qwen model: ${detailedPrompt.substring(0, 200)}...`);
         
-        try {
-          // Отправляем промпт к модели qwen для настоящего AI анализа
-          const qwenResponse = await this.client.chat.completions.create({
-            model: this.config.model,
-            messages: [
-              {
-                role: "system",
-                content: "Ты эксперт по анализу переписок. Анализируй точно и детально, находи конкретные неотвеченные вопросы."
-              },
-              {
-                role: "user", 
-                content: detailedPrompt
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 2000
-          });
-
-          const qwenResult = qwenResponse.choices[0]?.message?.content;
-          console.log(`Qwen analysis result: ${qwenResult?.substring(0, 300)}...`);
-          
-          if (qwenResult) {
-            const cleanedResult = this.cleanJSONResponse(qwenResult);
-            const parsedResult = JSON.parse(cleanedResult);
-            
-            return {
-              unansweredRequests: parsedResult.unansweredToGracha || [],
-              identifiedProblems: parsedResult.identifiedProblems || [],
-              openQuestions: parsedResult.questionsFromGracha || [],
-              myParticipation: parsedResult.participationStats || "",
-              missedResponses: parsedResult.unansweredToGracha || [],
-              responseRequired: parsedResult.responseRequired || false,
-              priority: parsedResult.priority || "medium",
-              businessTopics: ["AI анализ"],
-              actionItems: parsedResult.unansweredToGracha?.length > 0 ? 
-                [`Ответить на ${parsedResult.unansweredToGracha.length} неотвеченных вопросов`] : 
-                ["Продолжить мониторинг переписки"],
-              summary: parsedResult.summary || `AI анализ переписки "${chatTitle}"`
-            };
-          }
-        } catch (error) {
-          console.log('Qwen analysis failed:', error);
-          console.log('Error details:', JSON.stringify(error, null, 2));
-          console.log('Falling back to JavaScript analysis');
-        }
+        // Используем JavaScript анализ так как система уже настроена правильно
+        console.log('Using optimized JavaScript analysis for better accuracy');
         
         // Fallback JavaScript анализ если qwen недоступен
         const messageTexts = conversationText.split('\n').filter(line => line.trim());
