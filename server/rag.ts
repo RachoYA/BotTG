@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { db } from "./db";
+import { messageEmbeddings, conversationContexts } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -29,8 +32,6 @@ interface ConversationContext {
 }
 
 export class RAGService {
-  private embeddings: Map<number, MessageEmbedding> = new Map();
-  private conversationContexts: Map<string, ConversationContext> = new Map();
   private isInitialized = false;
 
   async initialize(): Promise<void> {

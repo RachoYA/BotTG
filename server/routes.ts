@@ -281,9 +281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize RAG system
   app.post("/api/rag/initialize", async (req, res) => {
     try {
-      const { ragService } = await import("./rag");
+      const { ragService } = await import("./rag-db");
       await ragService.initialize();
-      const stats = ragService.getStats();
+      const stats = await ragService.getStats();
       
       res.json({ 
         success: true, 
@@ -299,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get RAG system stats
   app.get("/api/rag/stats", async (req, res) => {
     try {
-      const { ragService } = await import("./rag");
-      const stats = ragService.getStats();
+      const { ragService } = await import("./rag-db");
+      const stats = await ragService.getStats();
       res.json(stats);
     } catch (error) {
       console.error("RAG stats error:", error);
