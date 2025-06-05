@@ -198,6 +198,14 @@ ${conversationText}
 
       if (allMessages.length === 0) {
         console.log("No messages found for daily summary");
+        // Create empty summary to indicate completion
+        const insertSummary: InsertDailySummary = {
+          date: date,
+          summary: "Сообщений за этот день не найдено",
+          requiresResponse: [],
+          keyTopics: []
+        };
+        await storage.createDailySummary(insertSummary);
         return;
       }
 

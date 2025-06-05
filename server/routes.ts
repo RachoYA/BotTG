@@ -226,9 +226,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/telegram/load-messages", async (req, res) => {
     try {
       const { chatId } = req.body;
+      
+      if (!chatId) {
+        console.log("Invalid chatId:", chatId);
+        return res.status(400).json({ message: "chatId is required" });
+      }
+      
       await telegramService.loadMessages(chatId, 50);
       res.json({ success: true, message: "Сообщения загружены" });
     } catch (error) {
+      console.error("Load messages error:", error);
       res.status(500).json({ message: "Ошибка загрузки сообщений" });
     }
   });
@@ -427,11 +434,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { aiService } = await import("./ai");
-      const result = await aiService.processPeriodMessages(startDate, endDate);
+      const result = await aiService.processUnreadMessages();
       
       res.json({ 
         success: true, 
-        ...result,
+        message: "Period processed successfully",
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
