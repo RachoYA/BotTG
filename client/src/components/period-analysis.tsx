@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Calendar, MessageSquare, CheckCircle, AlertTriangle, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Calendar, MessageSquare, CheckCircle, AlertTriangle, Clock, AlertCircle, Search, FileText } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,6 +13,7 @@ export default function PeriodAnalysis() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedChatId, setSelectedChatId] = useState("");
+  const [chatSearch, setChatSearch] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -22,6 +23,13 @@ export default function PeriodAnalysis() {
     queryKey: ["/api/chats"],
     queryFn: () => fetch("/api/chats").then(res => res.json())
   });
+
+  // Filter chats based on search
+  const filteredChats = useMemo(() => {
+    return chats.filter((chat: any) => 
+      chat.title.toLowerCase().includes(chatSearch.toLowerCase())
+    );
+  }, [chats, chatSearch]);
 
   const analyzePeriodMutation = useMutation({
     mutationFn: async (data: { startDate: string; endDate: string; chatId?: string }) => {
@@ -55,6 +63,38 @@ export default function PeriodAnalysis() {
       });
     }
   });
+
+  // Daily summary mutation
+  const dailySummaryMutation = useMutation({
+    mutationFn: async (date: string) => {
+      const response = await fetch("/api/summary/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date })
+      });
+      if (!response.ok) throw new Error("Ошибка генерации сводки");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Сводка дня создана",
+        description: "Ежедневная сводка всех сообщений успешно сгенерирована"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/summary/latest"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка генерации сводки",
+        description: error.message || "Произошла ошибка при генерации сводки дня",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleGenerateDailySummary = () => {
+    const today = new Date().toISOString().split('T')[0];
+    dailySummaryMutation.mutate(today);
+  };
 
   const handleStartAnalysis = () => {
     if (!startDate || !endDate) {
@@ -125,6 +165,18 @@ export default function PeriodAnalysis() {
 
           <div className="space-y-2">
             <Label htmlFor="chat-select">Чат для анализа</Label>
+            
+            {/* Chat search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Поиск чатов..."
+                value={chatSearch}
+                onChange={(e) => setChatSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
             <Select value={selectedChatId} onValueChange={setSelectedChatId}>
               <SelectTrigger>
                 <SelectValue placeholder="Выберите чат для анализа" />
@@ -132,7 +184,7 @@ export default function PeriodAnalysis() {
               <SelectContent>
                 <SelectItem value="all">🔄 Все персональные чаты (исключая группы)</SelectItem>
                 <div className="border-t my-1"></div>
-                {chats.map((chat: any) => (
+                {filteredChats.map((chat: any) => (
                   <SelectItem key={chat.id} value={chat.chatId}>
                     {chat.type === 'private' ? '👤' : '👥'} {chat.title}
                   </SelectItem>
@@ -141,23 +193,44 @@ export default function PeriodAnalysis() {
             </Select>
           </div>
 
-          <Button 
-            onClick={handleStartAnalysis}
-            disabled={analyzePeriodMutation.isPending}
-            className="w-full"
-          >
-            {analyzePeriodMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Анализируем контекст переписки...
-              </>
-            ) : (
-              <>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Начать контекстный анализ
-              </>
-            )}
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button 
+              onClick={handleStartAnalysis}
+              disabled={analyzePeriodMutation.isPending}
+              className="w-full"
+            >
+              {analyzePeriodMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Анализируем контекст переписки...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Начать контекстный анализ
+                </>
+              )}
+            </Button>
+
+            <Button 
+              onClick={handleGenerateDailySummary}
+              disabled={dailySummaryMutation.isPending}
+              variant="outline"
+              className="w-full"
+            >
+              {dailySummaryMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Создается сводка...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Сводка дня
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
