@@ -329,6 +329,74 @@ Respond with JSON containing:
       
       const result = JSON.parse(cleanResponse);
       console.log(`Parsed result summary: ${result.summary}`);
+      console.log(`Checking for useFullAnalysis flag: ${result.useFullAnalysis}`);
+      console.log(`Full result object:`, JSON.stringify(result, null, 2));
+      
+      // Если русская LLM указывает что нужен полный анализ, запускаем детальный разбор
+      const needsDetailedAnalysis = result.useFullAnalysis === true || 
+                                   result.summary?.includes('детальный анализ') ||
+                                   result.summary?.includes('полных возможностей');
+      
+      console.log(`Needs detailed analysis: ${needsDetailedAnalysis}`);
+      
+      if (needsDetailedAnalysis) {
+        console.log("Detected useFullAnalysis flag, running detailed qwen analysis...");
+        
+        const detailedPrompt = `Проанализируй эту переписку детально. Переписка "${chatTitle}" содержит ${messageLimit} сообщений:
+
+${conversationText}
+
+Верни подробный JSON анализ с полями:
+- summary: детальное описание содержания переписки
+- unansweredRequests: массив неотвеченных просьб
+- identifiedProblems: выявленные проблемы
+- openQuestions: открытые вопросы
+- myParticipation: анализ моего участия в диалоге
+- missedResponses: пропущенные ответы
+- responseRequired: нужен ли ответ (true/false)
+- priority: приоритет (low/medium/high)
+- businessTopics: деловые темы
+- actionItems: действия к выполнению`;
+
+        const detailedResponse = await fetch('http://localhost:8080/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer dummy-key'
+          },
+          body: JSON.stringify({
+            model: 'qwen',
+            messages: [
+              {
+                role: "system",
+                content: "Ты эксперт по анализу переписки. Анализируй детально русскоязычные сообщения и возвращай подробный JSON."
+              },
+              {
+                role: "user", 
+                content: detailedPrompt
+              }
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 2000,
+            temperature: 0.2
+          })
+        });
+        
+        const detailedData = await detailedResponse.json();
+        const detailedResult = JSON.parse(detailedData.choices[0]?.message?.content || "{}");
+        console.log(`Detailed analysis summary: ${detailedResult.summary}`);
+        
+        return {
+          unansweredRequests: detailedResult.unansweredRequests || [],
+          identifiedProblems: detailedResult.identifiedProblems || [],
+          openQuestions: detailedResult.openQuestions || [],
+          myParticipation: detailedResult.myParticipation || "",
+          missedResponses: detailedResult.missedResponses || [],
+          responseRequired: detailedResult.responseRequired || false,
+          summary: detailedResult.summary || "Детальный анализ переписки выполнен",
+          priority: detailedResult.priority || "medium"
+        };
+      }
       
       // Ensure all required fields exist
       return {
