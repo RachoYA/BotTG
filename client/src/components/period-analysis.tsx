@@ -166,22 +166,22 @@ export default function PeriodAnalysis() {
           <div className="space-y-2">
             <Label htmlFor="chat-select">Чат для анализа</Label>
             
-            {/* Chat search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Поиск чатов..."
-                value={chatSearch}
-                onChange={(e) => setChatSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
             <Select value={selectedChatId} onValueChange={setSelectedChatId}>
               <SelectTrigger>
                 <SelectValue placeholder="Выберите чат для анализа" />
               </SelectTrigger>
               <SelectContent>
+                <div className="p-2 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Поиск чатов..."
+                      value={chatSearch}
+                      onChange={(e) => setChatSearch(e.target.value)}
+                      className="pl-10 h-8"
+                    />
+                  </div>
+                </div>
                 <SelectItem value="all">🔄 Все персональные чаты (исключая группы)</SelectItem>
                 <div className="border-t my-1"></div>
                 {filteredChats.map((chat: any) => (
