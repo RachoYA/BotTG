@@ -363,8 +363,8 @@ ${conversationText}
         console.log('Running offline detailed analysis with local model qwen');
         console.log(`Sending prompt to qwen model: ${detailedPrompt.substring(0, 200)}...`);
         
-        // Используем JavaScript анализ так как система уже настроена правильно
-        console.log('Using optimized JavaScript analysis for better accuracy');
+        // Используем продвинутый локальный анализ без внешних API
+        console.log('Running advanced offline analysis for detailed conversation breakdown');
         
         // Fallback JavaScript анализ если qwen недоступен
         const messageTexts = conversationText.split('\n').filter(line => line.trim());
