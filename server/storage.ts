@@ -88,50 +88,14 @@ export class MemStorage implements IStorage {
   }
 
   private async initDemoData() {
-    // Demo user
+    // Demo user only - no fake chats or messages
     const demoUser: User = {
       id: 1,
       username: "admin",
       password: "password"
     };
     this.users.set(1, demoUser);
-
-    // Demo chat
-    const demoChat: TelegramChat = {
-      id: 1,
-      chatId: "demo_chat",
-      title: "Команда разработки",
-      isMonitored: true,
-      createdAt: new Date()
-    };
-    this.telegramChats.set(1, demoChat);
-
-    // Demo messages
-    const demoMessages: TelegramMessage[] = [
-      {
-        id: 1,
-        chatId: "demo_chat",
-        messageId: "1",
-        text: "Нужна помощь с багом в продакшене",
-        sender: "Алексей",
-        timestamp: new Date(Date.now() - 86400000), // 1 day ago
-        isProcessed: false,
-        createdAt: new Date()
-      },
-      {
-        id: 2,
-        chatId: "demo_chat",
-        messageId: "2",
-        text: "Когда будет готова новая фича?",
-        sender: "Мария",
-        timestamp: new Date(Date.now() - 43200000), // 12 hours ago
-        isProcessed: false,
-        createdAt: new Date()
-      }
-    ];
-    
-    demoMessages.forEach(msg => this.telegramMessages.set(msg.id, msg));
-    this.currentId = 3;
+    this.currentId = 2;
   }
 
   async getUser(id: number): Promise<User | undefined> {

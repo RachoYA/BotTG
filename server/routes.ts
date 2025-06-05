@@ -435,14 +435,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = await storage.getDashboardStats();
       const chats = await storage.getTelegramChats();
       const messages = await storage.getTelegramMessages();
-      const tasks = await storage.getExtractedTasks();
+      const analyses = await storage.getPeriodAnalyses();
       const insights = await storage.getAiInsights();
       
       res.json({
         users: 1, // Current user count
         chats: chats.length,
         messages: messages.length,
-        tasks: tasks.length,
+        analyses: analyses.length,
         insights: insights.length,
         ...stats
       });
