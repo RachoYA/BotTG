@@ -69,7 +69,7 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private telegramChats: Map<number, TelegramChat>;
   private telegramMessages: Map<number, TelegramMessage>;
-  private extractedTasks: Map<number, ExtractedTask>;
+  private periodAnalyses: Map<number, PeriodAnalysis>;
   private dailySummaries: Map<number, DailySummary>;
   private aiInsights: Map<number, AiInsight>;
   private currentId: number;
@@ -78,163 +78,73 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.telegramChats = new Map();
     this.telegramMessages = new Map();
-    this.extractedTasks = new Map();
+    this.periodAnalyses = new Map();
     this.dailySummaries = new Map();
     this.aiInsights = new Map();
     this.currentId = 1;
     
-    // Добавляем демо-данные для демонстрации
+    // Initialize demo data
     this.initDemoData();
   }
 
   private async initDemoData() {
-    // Создаем демо-чаты
-    const demoChats = [
-      {
-        chatId: "demo_management",
-        title: "Руководство компании",
-        type: "group",
-        isMonitored: true,
-        participantCount: 5
-      },
-      {
-        chatId: "demo_sales",
-        title: "Отдел продаж",
-        type: "group",
-        isMonitored: true,
-        participantCount: 8
-      },
-      {
-        chatId: "demo_development",
-        title: "Команда разработки",
-        type: "group",
-        isMonitored: false,
-        participantCount: 12
-      }
-    ];
-
-    for (const chat of demoChats) {
-      await this.createTelegramChat(chat);
-    }
-
-    // Создаем демо-сообщения
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const demoMessages = [
-      {
-        messageId: "msg_1",
-        chatId: "demo_management",
-        senderId: "user_1",
-        senderName: "Иван Петров",
-        text: "Нужно срочно подготовить отчет по продажам к завтрашней встрече с инвесторами",
-        timestamp: new Date(today.getTime() + 9 * 60 * 60 * 1000), // 9:00
-        isProcessed: false
-      },
-      {
-        messageId: "msg_2",
-        chatId: "demo_sales",
-        senderId: "user_2",
-        senderName: "Мария Сидорова",
-        text: "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться?",
-        timestamp: new Date(today.getTime() + 10 * 60 * 60 * 1000), // 10:00
-        isProcessed: false
-      },
-      {
-        messageId: "msg_3",
-        chatId: "demo_management",
-        senderId: "user_3",
-        senderName: "Александр Козлов",
-        text: "Обсудили с HR новую систему мотивации. Принято решение повысить базовую зарплату на 10%",
-        timestamp: new Date(today.getTime() + 11 * 60 * 60 * 1000), // 11:00
-        isProcessed: false
-      }
-    ];
-
-    for (const message of demoMessages) {
-      await this.createTelegramMessage(message);
-    }
-
-    // Создаем демо-задачи
-    const demoTasks = [
-      {
-        title: "Подготовить отчет по продажам",
-        description: "Создать презентацию с результатами квартала для встречи с инвесторами",
-        urgency: "high",
-        status: "pending",
-        deadline: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // завтра
-        chatId: "demo_management",
-        messageId: "msg_1"
-      },
-      {
-        title: "Принять решение по скидке ABC Corp",
-        description: "Рассмотреть запрос на скидку 15% от крупного клиента",
-        urgency: "high",
-        status: "pending",
-        deadline: null,
-        chatId: "demo_sales",
-        messageId: "msg_2"
-      },
-      {
-        title: "Оформить повышение зарплат",
-        description: "Подготовить документы для HR по повышению базовой зарплаты на 10%",
-        urgency: "medium",
-        status: "completed",
-        deadline: null,
-        chatId: "demo_management",
-        messageId: "msg_3"
-      }
-    ];
-
-    for (const task of demoTasks) {
-      await this.createExtractedTask(task);
-    }
-
-    // Создаем ежедневную сводку
-    const todayStr = today.toISOString().split('T')[0];
-    const summary = {
-      date: todayStr,
-      summary: "Сегодня обработано 3 важных сообщения из 2 чатов. Требуется ваше решение по скидке для ABC Corp. Подготовлен отчет по продажам для инвесторов.",
-      requiresResponse: [
-        "Клиент ABC Corp просит скидку 15%. Можем ли мы согласиться? (Отдел продаж, 10:00)"
-      ],
-      keyTopics: [
-        "Подготовка к встрече с инвесторами - презентация отчета по продажам",
-        "Повышение базовой зарплаты на 10% - решение принято",
-        "Скидка для ABC Corp - требует решения"
-      ]
+    // Demo user
+    const demoUser: User = {
+      id: 1,
+      username: "admin",
+      password: "password"
     };
+    this.users.set(1, demoUser);
 
-    await this.createDailySummary(summary);
+    // Demo chat
+    const demoChat: TelegramChat = {
+      id: 1,
+      chatId: "demo_chat",
+      title: "Команда разработки",
+      isMonitored: true,
+      createdAt: new Date()
+    };
+    this.telegramChats.set(1, demoChat);
 
-    // Создаем AI инсайты
-    const insights = [
+    // Demo messages
+    const demoMessages: TelegramMessage[] = [
       {
-        type: 'priority',
-        title: 'Совет по приоритизации',
-        content: 'У вас 1 срочная задача. Рекомендуется сначала ответить на запрос по отчету.'
+        id: 1,
+        chatId: "demo_chat",
+        messageId: "1",
+        text: "Нужна помощь с багом в продакшене",
+        sender: "Алексей",
+        timestamp: new Date(Date.now() - 86400000), // 1 day ago
+        isProcessed: false,
+        createdAt: new Date()
       },
       {
-        type: 'time_management', 
-        title: 'Управление временем',
-        content: 'Есть непрочитанные сообщения, требующие вашего внимания.'
+        id: 2,
+        chatId: "demo_chat",
+        messageId: "2",
+        text: "Когда будет готова новая фича?",
+        sender: "Мария",
+        timestamp: new Date(Date.now() - 43200000), // 12 hours ago
+        isProcessed: false,
+        createdAt: new Date()
       }
     ];
-
-    for (const insight of insights) {
-      await this.createAiInsight(insight);
-    }
+    
+    demoMessages.forEach(msg => this.telegramMessages.set(msg.id, msg));
+    this.currentId = 3;
   }
 
-  // Users
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    for (const user of this.users.values()) {
+      if (user.username === username) {
+        return user;
+      }
+    }
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -244,7 +154,6 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  // Telegram Chats
   async getTelegramChats(): Promise<TelegramChat[]> {
     return Array.from(this.telegramChats.values());
   }
@@ -254,7 +163,12 @@ export class MemStorage implements IStorage {
   }
 
   async getTelegramChatByChatId(chatId: string): Promise<TelegramChat | undefined> {
-    return Array.from(this.telegramChats.values()).find(chat => chat.chatId === chatId);
+    for (const chat of this.telegramChats.values()) {
+      if (chat.chatId === chatId) {
+        return chat;
+      }
+    }
+    return undefined;
   }
 
   async createTelegramChat(insertChat: InsertTelegramChat): Promise<TelegramChat> {
@@ -262,9 +176,7 @@ export class MemStorage implements IStorage {
     const chat: TelegramChat = {
       ...insertChat,
       id,
-      isMonitored: insertChat.isMonitored ?? false,
-      participantCount: insertChat.participantCount ?? 0,
-      createdAt: new Date(),
+      createdAt: new Date()
     };
     this.telegramChats.set(id, chat);
     return chat;
@@ -272,14 +184,14 @@ export class MemStorage implements IStorage {
 
   async updateTelegramChat(id: number, updates: Partial<TelegramChat>): Promise<TelegramChat | undefined> {
     const chat = this.telegramChats.get(id);
-    if (!chat) return undefined;
-    
-    const updatedChat = { ...chat, ...updates };
-    this.telegramChats.set(id, updatedChat);
-    return updatedChat;
+    if (chat) {
+      const updatedChat = { ...chat, ...updates };
+      this.telegramChats.set(id, updatedChat);
+      return updatedChat;
+    }
+    return undefined;
   }
 
-  // Telegram Messages
   async getTelegramMessages(chatId?: string, limit?: number): Promise<TelegramMessage[]> {
     let messages = Array.from(this.telegramMessages.values());
     
@@ -305,11 +217,7 @@ export class MemStorage implements IStorage {
     const message: TelegramMessage = {
       ...insertMessage,
       id,
-      senderId: insertMessage.senderId ?? null,
-      senderName: insertMessage.senderName ?? null,
-      text: insertMessage.text ?? null,
-      isProcessed: insertMessage.isProcessed ?? false,
-      createdAt: new Date(),
+      createdAt: new Date()
     };
     this.telegramMessages.set(id, message);
     return message;
@@ -323,64 +231,51 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Extracted Tasks
-  async getExtractedTasks(): Promise<ExtractedTask[]> {
-    return Array.from(this.extractedTasks.values())
-      .sort((a, b) => b.extractedAt!.getTime() - a.extractedAt!.getTime());
+  // Period Analysis methods
+  async getPeriodAnalyses(): Promise<PeriodAnalysis[]> {
+    return Array.from(this.periodAnalyses.values())
+      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
   }
 
-  async getTasksByStatus(status: string): Promise<ExtractedTask[]> {
-    return Array.from(this.extractedTasks.values()).filter(task => task.status === status);
+  async getPeriodAnalysisByPeriod(startDate: string, endDate: string, chatId?: string): Promise<PeriodAnalysis[]> {
+    return Array.from(this.periodAnalyses.values()).filter(analysis => {
+      const matchesPeriod = analysis.startDate === startDate && analysis.endDate === endDate;
+      const matchesChat = !chatId || analysis.chatId === chatId;
+      return matchesPeriod && matchesChat;
+    });
   }
 
-  async getUrgentTasks(): Promise<ExtractedTask[]> {
-    return Array.from(this.extractedTasks.values()).filter(task => 
-      task.priority === 'urgent' && task.status !== 'completed'
-    );
-  }
-
-  async createExtractedTask(insertTask: InsertExtractedTask): Promise<ExtractedTask> {
+  async createPeriodAnalysis(insertAnalysis: InsertPeriodAnalysis): Promise<PeriodAnalysis> {
     const id = this.currentId++;
-    const task: ExtractedTask = {
-      ...insertTask,
+    const analysis: PeriodAnalysis = {
+      ...insertAnalysis,
       id,
-      status: insertTask.status ?? 'new',
-      description: insertTask.description ?? null,
-      deadline: insertTask.deadline ?? null,
-      sourceMessageId: insertTask.sourceMessageId ?? null,
-      sourceChatId: insertTask.sourceChatId ?? null,
-      extractedAt: new Date(),
-      completedAt: null,
+      createdAt: new Date()
     };
-    this.extractedTasks.set(id, task);
-    return task;
+    this.periodAnalyses.set(id, analysis);
+    return analysis;
   }
 
-  async updateTaskStatus(id: number, status: string): Promise<ExtractedTask | undefined> {
-    const task = this.extractedTasks.get(id);
-    if (!task) return undefined;
-    
-    const updatedTask = {
-      ...task,
-      status,
-      completedAt: status === 'completed' ? new Date() : null,
-    };
-    this.extractedTasks.set(id, updatedTask);
-    return updatedTask;
+  async getRecentAnalyses(limit = 5): Promise<PeriodAnalysis[]> {
+    return Array.from(this.periodAnalyses.values())
+      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+      .slice(0, limit);
   }
 
-  async deleteTask(id: number): Promise<void> {
-    this.extractedTasks.delete(id);
-  }
-
-  // Daily Summaries
   async getDailySummary(date: string): Promise<DailySummary | undefined> {
-    return Array.from(this.dailySummaries.values()).find(summary => summary.date === date);
+    for (const summary of this.dailySummaries.values()) {
+      if (summary.date === date) {
+        return summary;
+      }
+    }
+    return undefined;
   }
 
   async getLatestDailySummary(): Promise<DailySummary | undefined> {
     const summaries = Array.from(this.dailySummaries.values());
-    return summaries.sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0];
+    if (summaries.length === 0) return undefined;
+    
+    return summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   }
 
   async createDailySummary(insertSummary: InsertDailySummary): Promise<DailySummary> {
@@ -388,24 +283,21 @@ export class MemStorage implements IStorage {
     const summary: DailySummary = {
       ...insertSummary,
       id,
-      requiresResponse: insertSummary.requiresResponse ?? [],
-      importantDiscussions: insertSummary.importantDiscussions ?? [],
-      keyDecisions: insertSummary.keyDecisions ?? [],
-      createdAt: new Date(),
+      createdAt: new Date()
     };
     this.dailySummaries.set(id, summary);
     return summary;
   }
 
-  // AI Insights
   async getAiInsights(): Promise<AiInsight[]> {
     return Array.from(this.aiInsights.values())
-      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime());
+      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
   }
 
   async getRecentAiInsights(limit = 5): Promise<AiInsight[]> {
-    const insights = await this.getAiInsights();
-    return insights.slice(0, limit);
+    return Array.from(this.aiInsights.values())
+      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+      .slice(0, limit);
   }
 
   async createAiInsight(insertInsight: InsertAiInsight): Promise<AiInsight> {
@@ -413,34 +305,28 @@ export class MemStorage implements IStorage {
     const insight: AiInsight = {
       ...insertInsight,
       id,
-      createdAt: new Date(),
+      createdAt: new Date()
     };
     this.aiInsights.set(id, insight);
     return insight;
   }
 
-  // Dashboard Stats
   async getDashboardStats(): Promise<{
     unreadMessages: number;
-    urgentTasks: number;
+    pendingAnalyses: number;
     activeChats: number;
-    completedTasksPercentage: number;
+    responseRequiredChats: number;
   }> {
-    const unprocessedMessages = await this.getUnprocessedMessages();
-    const urgentTasks = await this.getUrgentTasks();
-    const monitoredChats = await this.getMonitoredChats();
-    const allTasks = await this.getExtractedTasks();
-    const completedTasks = allTasks.filter(task => task.status === 'completed');
-    
-    const completedTasksPercentage = allTasks.length > 0 
-      ? Math.round((completedTasks.length / allTasks.length) * 100)
-      : 0;
+    const unreadMessages = Array.from(this.telegramMessages.values()).filter(msg => !msg.isProcessed).length;
+    const activeChats = Array.from(this.telegramChats.values()).filter(chat => chat.isMonitored).length;
+    const pendingAnalyses = Array.from(this.periodAnalyses.values()).filter(analysis => analysis.responseRequired).length;
+    const responseRequiredChats = Array.from(this.periodAnalyses.values()).filter(analysis => analysis.responseRequired).length;
 
     return {
-      unreadMessages: unprocessedMessages.length,
-      urgentTasks: urgentTasks.length,
-      activeChats: monitoredChats.length,
-      completedTasksPercentage,
+      unreadMessages,
+      pendingAnalyses,
+      activeChats,
+      responseRequiredChats
     };
   }
 }
@@ -464,13 +350,14 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Telegram Chats
   async getTelegramChats(): Promise<TelegramChat[]> {
-    return await db.select().from(telegramChats).orderBy(desc(telegramChats.id));
+    return await db.select().from(telegramChats).orderBy(desc(telegramChats.createdAt));
   }
 
   async getMonitoredChats(): Promise<TelegramChat[]> {
-    return await db.select().from(telegramChats).where(eq(telegramChats.isMonitored, true));
+    return await db.select().from(telegramChats)
+      .where(eq(telegramChats.isMonitored, true))
+      .orderBy(desc(telegramChats.createdAt));
   }
 
   async getTelegramChatByChatId(chatId: string): Promise<TelegramChat | undefined> {
@@ -495,25 +382,20 @@ export class DatabaseStorage implements IStorage {
     return chat || undefined;
   }
 
-  // Telegram Messages
   async getTelegramMessages(chatId?: string, limit?: number): Promise<TelegramMessage[]> {
-    if (chatId && limit) {
-      return await db.select().from(telegramMessages)
-        .where(eq(telegramMessages.chatId, chatId))
-        .orderBy(desc(telegramMessages.timestamp))
-        .limit(limit);
-    } else if (chatId) {
-      return await db.select().from(telegramMessages)
-        .where(eq(telegramMessages.chatId, chatId))
-        .orderBy(desc(telegramMessages.timestamp));
-    } else if (limit) {
-      return await db.select().from(telegramMessages)
-        .orderBy(desc(telegramMessages.timestamp))
-        .limit(limit);
-    } else {
-      return await db.select().from(telegramMessages)
-        .orderBy(desc(telegramMessages.timestamp));
+    let query = db.select().from(telegramMessages);
+    
+    if (chatId) {
+      query = query.where(eq(telegramMessages.chatId, chatId));
     }
+    
+    query = query.orderBy(desc(telegramMessages.timestamp));
+    
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    return await query;
   }
 
   async getUnprocessedMessages(): Promise<TelegramMessage[]> {
@@ -523,26 +405,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTelegramMessage(insertMessage: InsertTelegramMessage): Promise<TelegramMessage> {
-    try {
-      const [message] = await db
-        .insert(telegramMessages)
-        .values(insertMessage)
-        .returning();
-      return message;
-    } catch (error: any) {
-      if (error.code === '23505') {
-        // Дублирование - получаем существующее сообщение
-        const [existing] = await db
-          .select()
-          .from(telegramMessages)
-          .where(and(
-            eq(telegramMessages.messageId, insertMessage.messageId),
-            eq(telegramMessages.chatId, insertMessage.chatId)
-          ));
-        return existing;
-      }
-      throw error;
-    }
+    const [message] = await db
+      .insert(telegramMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
   }
 
   async markMessageAsProcessed(id: number): Promise<void> {
@@ -552,55 +419,50 @@ export class DatabaseStorage implements IStorage {
       .where(eq(telegramMessages.id, id));
   }
 
-  // Extracted Tasks
-  async getExtractedTasks(): Promise<ExtractedTask[]> {
-    return await db.select().from(extractedTasks).orderBy(desc(extractedTasks.id));
+  // Period Analysis methods
+  async getPeriodAnalyses(): Promise<PeriodAnalysis[]> {
+    return await db.select().from(periodAnalysis).orderBy(desc(periodAnalysis.createdAt));
   }
 
-  async getTasksByStatus(status: string): Promise<ExtractedTask[]> {
-    return await db.select().from(extractedTasks)
-      .where(eq(extractedTasks.status, status))
-      .orderBy(desc(extractedTasks.id));
+  async getPeriodAnalysisByPeriod(startDate: string, endDate: string, chatId?: string): Promise<PeriodAnalysis[]> {
+    let query = db.select().from(periodAnalysis)
+      .where(and(
+        eq(periodAnalysis.startDate, startDate),
+        eq(periodAnalysis.endDate, endDate)
+      ));
+    
+    if (chatId) {
+      query = query.where(and(
+        eq(periodAnalysis.startDate, startDate),
+        eq(periodAnalysis.endDate, endDate),
+        eq(periodAnalysis.chatId, chatId)
+      ));
+    }
+    
+    return await query;
   }
 
-  async getUrgentTasks(): Promise<ExtractedTask[]> {
-    return await db.select().from(extractedTasks)
-      .where(eq(extractedTasks.urgency, 'high'))
-      .orderBy(desc(extractedTasks.id));
-  }
-
-  async createExtractedTask(insertTask: InsertExtractedTask): Promise<ExtractedTask> {
-    const [task] = await db
-      .insert(extractedTasks)
-      .values(insertTask)
+  async createPeriodAnalysis(insertAnalysis: InsertPeriodAnalysis): Promise<PeriodAnalysis> {
+    const [analysis] = await db
+      .insert(periodAnalysis)
+      .values(insertAnalysis)
       .returning();
-    return task;
+    return analysis;
   }
 
-  async updateTaskStatus(id: number, status: string): Promise<ExtractedTask | undefined> {
-    const [task] = await db
-      .update(extractedTasks)
-      .set({ status })
-      .where(eq(extractedTasks.id, id))
-      .returning();
-    return task || undefined;
+  async getRecentAnalyses(limit = 5): Promise<PeriodAnalysis[]> {
+    return await db.select().from(periodAnalysis)
+      .orderBy(desc(periodAnalysis.createdAt))
+      .limit(limit);
   }
 
-  async deleteTask(id: number): Promise<void> {
-    await db.delete(extractedTasks).where(eq(extractedTasks.id, id));
-  }
-
-  // Daily Summaries
   async getDailySummary(date: string): Promise<DailySummary | undefined> {
-    const [summary] = await db.select().from(dailySummaries)
-      .where(eq(dailySummaries.date, date));
+    const [summary] = await db.select().from(dailySummaries).where(eq(dailySummaries.date, date));
     return summary || undefined;
   }
 
   async getLatestDailySummary(): Promise<DailySummary | undefined> {
-    const [summary] = await db.select().from(dailySummaries)
-      .orderBy(desc(dailySummaries.id))
-      .limit(1);
+    const [summary] = await db.select().from(dailySummaries).orderBy(desc(dailySummaries.date)).limit(1);
     return summary || undefined;
   }
 
@@ -612,15 +474,12 @@ export class DatabaseStorage implements IStorage {
     return summary;
   }
 
-  // AI Insights
   async getAiInsights(): Promise<AiInsight[]> {
-    return await db.select().from(aiInsights).orderBy(desc(aiInsights.id));
+    return await db.select().from(aiInsights).orderBy(desc(aiInsights.createdAt));
   }
 
   async getRecentAiInsights(limit = 5): Promise<AiInsight[]> {
-    return await db.select().from(aiInsights)
-      .orderBy(desc(aiInsights.id))
-      .limit(limit);
+    return await db.select().from(aiInsights).orderBy(desc(aiInsights.createdAt)).limit(limit);
   }
 
   async createAiInsight(insertInsight: InsertAiInsight): Promise<AiInsight> {
@@ -631,37 +490,28 @@ export class DatabaseStorage implements IStorage {
     return insight;
   }
 
-  // Dashboard Stats
   async getDashboardStats(): Promise<{
     unreadMessages: number;
-    urgentTasks: number;
+    pendingAnalyses: number;
     activeChats: number;
-    completedTasksPercentage: number;
+    responseRequiredChats: number;
   }> {
     const [unreadCount] = await db.select({ count: count() }).from(telegramMessages)
       .where(eq(telegramMessages.isProcessed, false));
     
-    const [urgentCount] = await db.select({ count: count() }).from(extractedTasks)
-      .where(eq(extractedTasks.urgency, 'high'));
-    
-    const [activeCount] = await db.select({ count: count() }).from(telegramChats)
+    const [activeChatCount] = await db.select({ count: count() }).from(telegramChats)
       .where(eq(telegramChats.isMonitored, true));
     
-    const [totalTasks] = await db.select({ count: count() }).from(extractedTasks);
-    const [completedTasks] = await db.select({ count: count() }).from(extractedTasks)
-      .where(eq(extractedTasks.status, 'completed'));
-    
-    const completedTasksPercentage = totalTasks.count > 0 
-      ? Math.round((completedTasks.count / totalTasks.count) * 100) 
-      : 0;
+    const [pendingAnalysesCount] = await db.select({ count: count() }).from(periodAnalysis)
+      .where(eq(periodAnalysis.responseRequired, true));
 
     return {
       unreadMessages: unreadCount.count,
-      urgentTasks: urgentCount.count,
-      activeChats: activeCount.count,
-      completedTasksPercentage,
+      pendingAnalyses: pendingAnalysesCount.count,
+      activeChats: activeChatCount.count,
+      responseRequiredChats: pendingAnalysesCount.count
     };
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

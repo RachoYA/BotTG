@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { telegramService } from "./telegram";
 import { aiService } from "./ai";
 import { schedulerService } from "./scheduler";
-import { insertTelegramChatSchema, insertExtractedTaskSchema } from "@shared/schema";
+import { insertTelegramChatSchema, insertPeriodAnalysisSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start services
