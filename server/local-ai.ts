@@ -23,6 +23,28 @@ class LocalAIService {
   private fallbackToOpenAI: boolean = false;
   private openaiClient?: OpenAI;
 
+  private cleanJSONResponse(response: string): string {
+    let cleanResponse = response.trim();
+    
+    // Remove common Russian prefixes
+    const badPrefixes = ['Готовлю результат', 'Обрабатываю', 'Анализирую', 'Готово', 'Результат', 'Ответ:', 'JSON:'];
+    for (const prefix of badPrefixes) {
+      if (cleanResponse.startsWith(prefix)) {
+        cleanResponse = cleanResponse.substring(prefix.length).trim();
+      }
+    }
+    
+    // Find JSON boundaries
+    const jsonStart = cleanResponse.indexOf('{');
+    const jsonEnd = cleanResponse.lastIndexOf('}');
+    
+    if (jsonStart === -1 || jsonEnd === -1 || jsonStart >= jsonEnd) {
+      throw new Error('No valid JSON found in response: ' + response.substring(0, 100));
+    }
+    
+    return cleanResponse.substring(jsonStart, jsonEnd + 1);
+  }
+
   constructor(config: Partial<LocalAIConfig> = {}) {
     this.config = { ...defaultConfig, ...config };
     
@@ -275,21 +297,7 @@ Respond with JSON containing these fields:
         maxTokens: 1000
       });
 
-      // Clean the response to extract JSON
-      let cleanResponse = response.trim();
-      
-      // Remove any text before the JSON starts
-      const jsonStart = cleanResponse.indexOf('{');
-      if (jsonStart > 0) {
-        cleanResponse = cleanResponse.substring(jsonStart);
-      }
-      
-      // Remove any text after the JSON ends
-      const jsonEnd = cleanResponse.lastIndexOf('}');
-      if (jsonEnd >= 0 && jsonEnd < cleanResponse.length - 1) {
-        cleanResponse = cleanResponse.substring(0, jsonEnd + 1);
-      }
-      
+      const cleanResponse = this.cleanJSONResponse(response);
       const result = JSON.parse(cleanResponse);
       
       // Ensure all required fields exist
@@ -361,21 +369,7 @@ Respond with JSON:
         maxTokens: 500
       });
 
-      // Clean the response to extract JSON
-      let cleanResponse = response.trim();
-      
-      // Remove any text before the JSON starts
-      const jsonStart = cleanResponse.indexOf('{');
-      if (jsonStart > 0) {
-        cleanResponse = cleanResponse.substring(jsonStart);
-      }
-      
-      // Remove any text after the JSON ends
-      const jsonEnd = cleanResponse.lastIndexOf('}');
-      if (jsonEnd >= 0 && jsonEnd < cleanResponse.length - 1) {
-        cleanResponse = cleanResponse.substring(0, jsonEnd + 1);
-      }
-      
+      const cleanResponse = this.cleanJSONResponse(response);
       const result = JSON.parse(cleanResponse);
       return {
         type: result.type || "recommendation",

@@ -46,7 +46,9 @@ export const ENHANCED_PROMPTS = {
 - Вопросы по срокам и исполнению
 - Прямые указания команде
 
-Отвечай структурированным JSON с полями:
+ВАЖНО: Отвечай ТОЛЬКО чистым JSON без дополнительного текста. Не добавляй объяснения до или после JSON.
+
+Формат ответа:
 {
   "summary": "краткое резюме переписки",
   "businessTopics": ["ключевые бизнес-темы"],
@@ -56,9 +58,9 @@ export const ENHANCED_PROMPTS = {
   "teamInteractions": ["взаимодействие с командой"],
   "clientIssues": ["клиентские вопросы"],
   "financialTopics": ["финансовые аспекты"],
-  "responseRequired": true/false,
-  "priority": "high/medium/low",
-  "sentiment": "positive/neutral/negative"
+  "responseRequired": true,
+  "priority": "high",
+  "sentiment": "neutral"
 }`,
 
   CONVERSATION_CONTEXT: `Ты анализируешь контекст деловых переговоров.
