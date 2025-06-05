@@ -11,45 +11,50 @@ import RAGManagement from "@/components/rag-management";
 export default function SettingsPage() {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar />
+      <MobileSidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm border-b px-6 py-4">
+        <header className="bg-white shadow-sm border-b mobile-px mobile-py pt-16 lg:pt-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                <Settings className="w-6 h-6 mr-3" />
+              <h2 className="mobile-text-2xl font-bold text-gray-800 flex items-center">
+                <Settings className="w-4 h-4 lg:w-6 lg:h-6 mr-2 lg:mr-3" />
                 Настройки системы
               </h2>
-              <p className="text-gray-600">Управление подключениями и конфигурацией AI-копилота</p>
+              <p className="mobile-text-base text-gray-600">Управление подключениями и конфигурацией AI-копилота</p>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto mobile-p">
           <div className="max-w-4xl mx-auto">
 
-      <Tabs defaultValue="telegram" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="telegram" className="flex items-center">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Telegram
+      <Tabs defaultValue="telegram" className="space-y-4 lg:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
+          <TabsTrigger value="telegram" className="flex items-center mobile-text-sm">
+            <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">Telegram</span>
+            <span className="lg:hidden">TG</span>
           </TabsTrigger>
-          <TabsTrigger value="ai" className="flex items-center">
-            <Brain className="w-4 h-4 mr-2" />
-            AI модель
+          <TabsTrigger value="ai" className="flex items-center mobile-text-sm">
+            <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">AI модель</span>
+            <span className="lg:hidden">AI</span>
           </TabsTrigger>
-          <TabsTrigger value="rag" className="flex items-center">
-            <Brain className="w-4 h-4 mr-2" />
-            RAG система
+          <TabsTrigger value="rag" className="flex items-center mobile-text-sm">
+            <Brain className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">RAG система</span>
+            <span className="lg:hidden">RAG</span>
           </TabsTrigger>
-          <TabsTrigger value="analysis" className="flex items-center">
-            <Calendar className="w-4 h-4 mr-2" />
-            Анализ периодов
+          <TabsTrigger value="analysis" className="flex items-center mobile-text-sm">
+            <Calendar className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">Анализ периодов</span>
+            <span className="lg:hidden">Анализ</span>
           </TabsTrigger>
-          <TabsTrigger value="database" className="flex items-center">
-            <Database className="w-4 h-4 mr-2" />
-            База данных
+          <TabsTrigger value="database" className="flex items-center mobile-text-sm">
+            <Database className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+            <span className="hidden lg:inline">База данных</span>
+            <span className="lg:hidden">БД</span>
           </TabsTrigger>
         </TabsList>
 
