@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -121,3 +121,42 @@ export type InsertDailySummary = z.infer<typeof insertDailySummarySchema>;
 
 export type AiInsight = typeof aiInsights.$inferSelect;
 export type InsertAiInsight = z.infer<typeof insertAiInsightSchema>;
+
+// RAG System Tables
+export const messageEmbeddings = pgTable("message_embeddings", {
+  id: serial("id").primaryKey(),
+  chatId: text("chat_id").notNull(),
+  messageId: text("message_id").notNull(),
+  text: text("text").notNull(),
+  senderName: text("sender_name"),
+  timestamp: timestamp("timestamp").notNull(),
+  embedding: doublePrecision("embedding").array().notNull(),
+  chatTitle: text("chat_title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const conversationContexts = pgTable("conversation_contexts", {
+  id: serial("id").primaryKey(),
+  chatId: text("chat_id").notNull().unique(),
+  chatTitle: text("chat_title").notNull(),
+  summary: text("summary").notNull(),
+  keyTopics: text("key_topics").array().notNull(),
+  relationship: text("relationship").notNull(),
+  messageCount: integer("message_count").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
+export const insertMessageEmbeddingSchema = createInsertSchema(messageEmbeddings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConversationContextSchema = createInsertSchema(conversationContexts).omit({
+  id: true,
+});
+
+export type MessageEmbedding = typeof messageEmbeddings.$inferSelect;
+export type InsertMessageEmbedding = z.infer<typeof insertMessageEmbeddingSchema>;
+
+export type ConversationContext = typeof conversationContexts.$inferSelect;
+export type InsertConversationContext = z.infer<typeof insertConversationContextSchema>;
