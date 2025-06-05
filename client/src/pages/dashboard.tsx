@@ -1,4 +1,4 @@
-import Sidebar from "@/components/sidebar";
+import MobileSidebar from "@/components/mobile-sidebar";
 import PeriodAnalysis from "@/components/period-analysis";
 import DailySummary from "@/components/daily-summary";
 import AIInsights from "@/components/ai-insights";
@@ -55,13 +55,13 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="p-6">
+      <MobileSidebar />
+      <main className="flex-1 overflow-auto lg:ml-0">
+        <div className="p-4 lg:p-6 pt-16 lg:pt-6">
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Главная панель</h1>
-            <p className="text-gray-600 mt-2">
+          <div className="mb-4 lg:mb-6">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Главная панель</h1>
+            <p className="text-sm lg:text-base text-gray-600 mt-2">
               Обзор активности и результаты контекстного анализа переписки
             </p>
           </div>

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +12,14 @@ import {
   Brain, 
   Settings,
   AlertTriangle,
-  Users
+  Users,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Get dashboard stats for sidebar metrics
   const { data: stats = {} } = useQuery({
