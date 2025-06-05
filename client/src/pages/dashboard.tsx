@@ -269,6 +269,13 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Analysis Detail Modal */}
+      <AnalysisDetailModal
+        analysis={selectedAnalysis}
+        open={isAnalysisModalOpen}
+        onOpenChange={setIsAnalysisModalOpen}
+      />
     </div>
   );
 }

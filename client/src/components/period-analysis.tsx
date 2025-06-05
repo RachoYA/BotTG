@@ -33,7 +33,7 @@ export default function PeriodAnalysis() {
 
   const analyzePeriodMutation = useMutation({
     mutationFn: async (data: { startDate: string; endDate: string; chatId?: string }) => {
-      const response = await fetch("/api/conversation/analyze-period", {
+      const response = await fetch("/api/ai/analyze-period", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
@@ -122,11 +122,17 @@ export default function PeriodAnalysis() {
     const endDateTime = new Date(endDate);
     endDateTime.setHours(23, 59, 59, 999); // Конец дня
 
-    analyzePeriodMutation.mutate({
+    const requestData: any = {
       startDate: startDateTime.toISOString(),
-      endDate: endDateTime.toISOString(),
-      chatId: selectedChatId
-    });
+      endDate: endDateTime.toISOString()
+    };
+
+    // If not "all", include specific chatId
+    if (selectedChatId !== "all") {
+      requestData.chatId = selectedChatId;
+    }
+
+    analyzePeriodMutation.mutate(requestData);
   };
 
   return (
