@@ -1,8 +1,8 @@
 import OpenAI from "openai";
-import { storage } from "./storage";
-import { telegramService } from "./telegram";
-import { ragService } from "./rag-db";
-import { localAI } from "./local-ai";
+import { storage } from "./storage.js";
+import { telegramService } from "./telegram.js";
+import { ragService } from "./rag-db.js";
+import { localAI } from "./local-ai.js";
 import {
   type InsertPeriodAnalysis,
   type InsertDailySummary,

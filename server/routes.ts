@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { telegramService } from "./telegram";
-import { aiService } from "./ai";
-import { localAI } from "./local-ai";
-import { schedulerService } from "./scheduler";
+import { storage } from "./storage.js";
+import { telegramService } from "./telegram.js";
+import { aiService } from "./ai.js";
+import { localAI } from "./local-ai.js";
+import { schedulerService } from "./scheduler.js";
 import { insertTelegramChatSchema, insertPeriodAnalysisSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {

@@ -1,6 +1,6 @@
 import { TelegramClient, Api } from "telegram";
-import { StringSession } from "telegram/sessions";
-import { storage } from "./storage";
+import { StringSession } from "telegram/sessions/StringSession.js";
+import { storage } from "./storage.js";
 import { InsertTelegramChat, InsertTelegramMessage } from "@shared/schema";
 import * as fs from "fs";
 import * as path from "path";
