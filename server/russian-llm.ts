@@ -177,17 +177,11 @@ export class RussianLLMService {
   private generateRussianResponse(prompt: string, context: any[]): string {
     const lowerPrompt = prompt.toLowerCase();
     
-    // Проверяем паттерны на основе реальных данных пользователя
-    if (this.matchesTeamPattern(lowerPrompt)) {
-      return this.generateTeamAnalysisResponse(prompt);
-    } else if (this.matchesFinancialPattern(lowerPrompt)) {
-      return this.generateFinancialAnalysisResponse(prompt);
-    } else if (this.matchesTechnicalPattern(lowerPrompt)) {
-      return this.generateTechnicalAnalysisResponse(prompt);
-    } else if (lowerPrompt.includes('детально') || lowerPrompt.includes('подробно')) {
-      // Для детального анализа используем продвинутые возможности qwen
-      return this.generateDetailedAnalysisResponse(prompt);
-    } else if (lowerPrompt.includes('анализ') || lowerPrompt.includes('проанализируй')) {
+    // ВСЕГДА используем детальный анализ для любого запроса анализа
+    if (this.matchesTeamPattern(lowerPrompt) || this.matchesFinancialPattern(lowerPrompt) || 
+        this.matchesTechnicalPattern(lowerPrompt) || lowerPrompt.includes('детально') || 
+        lowerPrompt.includes('подробно') || lowerPrompt.includes('анализ') || 
+        lowerPrompt.includes('проанализируй')) {
       // Всегда возвращаем флаг для детального анализа
       return this.generateDetailedAnalysisResponse(prompt);
     } else if (lowerPrompt.includes('инсайт') || lowerPrompt.includes('рекомендаци')) {

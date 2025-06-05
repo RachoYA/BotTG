@@ -330,10 +330,8 @@ Respond with JSON containing:
       console.log(`Checking for useFullAnalysis flag: ${result.useFullAnalysis}`);
       console.log(`Full result object:`, JSON.stringify(result, null, 2));
       
-      // Если русская LLM указывает что нужен полный анализ, запускаем детальный разбор
-      const needsDetailedAnalysis = result.useFullAnalysis === true || 
-                                   result.summary?.includes('детальный анализ') ||
-                                   result.summary?.includes('полных возможностей');
+      // ВСЕГДА запускаем детальный анализ для анализа периода
+      const needsDetailedAnalysis = true;
       
       console.log(`Needs detailed analysis: ${needsDetailedAnalysis}`);
       
