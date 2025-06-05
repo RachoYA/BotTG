@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { messageEmbeddings, conversationContexts } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
+import { localAI } from "./local-ai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -41,13 +42,7 @@ export class RAGService {
               chat.title
             );
             
-            const embeddingResponse = await openai.embeddings.create({
-              model: "text-embedding-3-small",
-              input: textForEmbedding,
-              encoding_format: "float",
-            });
-
-            const embedding = embeddingResponse.data[0].embedding;
+            const embedding = await localAI.generateEmbedding(textForEmbedding);
             
             await db.insert(messageEmbeddings).values({
               chatId: message.chatId,
@@ -115,31 +110,8 @@ export class RAGService {
   }
 
   private async analyzeConversationContext(chat: any, messages: any[]): Promise<any> {
-    const recentMessages = messages.slice(0, 50);
-    const messageTexts = recentMessages.map(m => `${m.senderName || 'Unknown'}: ${m.text}`).join('\n');
-    
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `Analyze this conversation and provide insights in JSON format:
-            {
-              "summary": "Brief summary of the conversation",
-              "keyTopics": ["topic1", "topic2", "topic3"],
-              "relationship": "Type of relationship (personal, business, support, etc.)"
-            }`
-          },
-          {
-            role: "user",
-            content: `Chat: ${chat.title}\n\nRecent messages:\n${messageTexts}`
-          }
-        ],
-        response_format: { type: "json_object" },
-      });
-
-      return JSON.parse(response.choices[0].message.content || '{}');
+      return await localAI.analyzeConversationContext(chat, messages);
     } catch (error) {
       console.error('Error analyzing conversation context:', error);
       return {
@@ -163,13 +135,7 @@ export class RAGService {
         chat.title
       );
 
-      const embeddingResponse = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: textForEmbedding,
-        encoding_format: "float",
-      });
-
-      const embedding = embeddingResponse.data[0].embedding;
+      const embedding = await localAI.generateEmbedding(textForEmbedding);
       
       await db.insert(messageEmbeddings).values({
         chatId: message.chatId,
