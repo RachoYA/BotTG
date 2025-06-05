@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { storage } from "./storage";
-import { db } from "./db";
+import { storage } from "./storage.js";
+import { db } from "./db.js";
 import { messageEmbeddings, conversationContexts } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 

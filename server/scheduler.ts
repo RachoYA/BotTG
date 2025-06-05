@@ -1,5 +1,5 @@
-import { aiService } from "./ai";
-import { telegramService } from "./telegram";
+import { aiService } from "./ai.js";
+import { telegramService } from "./telegram.js";
 
 export class SchedulerService {
   private intervals: NodeJS.Timeout[] = [];
