@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { telegramService } from "./telegram";
+import { ragService } from "./rag";
 import {
   type InsertPeriodAnalysis,
   type InsertDailySummary,
@@ -47,6 +48,8 @@ export class AIService {
       console.log(`Processing ${unreadMessages.length} unread messages...`);
 
       for (const message of unreadMessages) {
+        // Добавляем новое сообщение в RAG систему
+        await ragService.addNewMessage(message);
         await storage.markMessageAsProcessed(message.id);
       }
     } catch (error) {
