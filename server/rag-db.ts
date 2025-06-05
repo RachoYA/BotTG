@@ -235,27 +235,34 @@ export class RAGService {
         whereClause = sql`${messageEmbeddings.chatId} = ANY(${chatIds})`;
       }
 
-      // PostgreSQL cosine similarity search
-      const results = await db.select({
-        id: messageEmbeddings.id,
-        chatId: messageEmbeddings.chatId,
-        messageId: messageEmbeddings.messageId,
-        text: messageEmbeddings.text,
-        senderName: messageEmbeddings.senderName,
-        timestamp: messageEmbeddings.timestamp,
-        chatTitle: messageEmbeddings.chatTitle,
-        similarity: sql<number>`1 - (${messageEmbeddings.embedding} <=> ${queryEmbedding}::vector)`
-      })
-      .from(messageEmbeddings)
-      .where(whereClause)
-      .orderBy(sql`1 - (${messageEmbeddings.embedding} <=> ${queryEmbedding}::vector) DESC`)
-      .limit(limit);
+      // Manual cosine similarity calculation for basic PostgreSQL
+      const allEmbeddings = await db.select()
+        .from(messageEmbeddings)
+        .where(whereClause);
+
+      // Calculate cosine similarity manually
+      const resultsWithSimilarity = allEmbeddings.map(emb => ({
+        ...emb,
+        similarity: this.cosineSimilarity(queryEmbedding, emb.embedding as number[])
+      }));
+
+      // Sort by similarity and take top results
+      const results = resultsWithSimilarity
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, limit);
 
       return results;
     } catch (error) {
       console.error('Error in semantic search:', error);
       return [];
     }
+  }
+
+  private cosineSimilarity(a: number[], b: number[]): number {
+    const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+    const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+    const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+    return dotProduct / (magnitudeA * magnitudeB);
   }
 
   async getRelevantContext(query: string, chatIds?: string[], maxTokens: number = 4000): Promise<string> {
@@ -278,14 +285,14 @@ export class RAGService {
   }
 
   async getStats(): Promise<{ totalMessages: number; totalChats: number; totalContexts: number }> {
-    const [{ messageCount }] = await db.select({ messageCount: sql<number>`count(*)` }).from(messageEmbeddings);
-    const [{ contextCount }] = await db.select({ contextCount: sql<number>`count(*)` }).from(conversationContexts);
-    const [{ chatCount }] = await db.select({ chatCount: sql<number>`count(DISTINCT ${messageEmbeddings.chatId})` }).from(messageEmbeddings);
+    const [{ messageCount }] = await db.select({ messageCount: sql<number>`count(*)::int` }).from(messageEmbeddings);
+    const [{ contextCount }] = await db.select({ contextCount: sql<number>`count(*)::int` }).from(conversationContexts);
+    const [{ chatCount }] = await db.select({ chatCount: sql<number>`count(DISTINCT ${messageEmbeddings.chatId})::int` }).from(messageEmbeddings);
     
     return {
-      totalMessages: messageCount || 0,
-      totalChats: chatCount || 0,
-      totalContexts: contextCount || 0
+      totalMessages: parseInt(messageCount as any) || 0,
+      totalChats: parseInt(chatCount as any) || 0,
+      totalContexts: parseInt(contextCount as any) || 0
     };
   }
 }
