@@ -66,6 +66,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/ai/russian/health", async (req, res) => {
+    try {
+      const isRunning = russianLLM.isServiceRunning();
+      const config = russianLLM.getConfig();
+      
+      res.json({
+        status: isRunning ? "healthy" : "error",
+        model: config.model,
+        port: config.port,
+        isRunning
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        status: "error",
+        model: "russian-chat",
+        port: 8080,
+        isRunning: false
+      });
+    }
+  });
+
   app.post("/api/ai/russian/toggle", async (req, res) => {
     try {
       const { enable } = req.body;

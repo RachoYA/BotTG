@@ -4,15 +4,34 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Brain, Cpu, Activity, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
+interface LocalAIConfig {
+  baseURL: string;
+  apiKey: string;
+  model: string;
+  embeddingModel: string;
+}
+
+interface LocalAIStatus {
+  connected: boolean;
+  config: LocalAIConfig;
+  lastTest: string;
+}
+
+interface RussianLLMHealth {
+  status: "healthy" | "error";
+  model: string;
+  port: number;
+  isRunning: boolean;
+}
+
 export default function ModelStatus() {
-  const { data: localAIStatus, isLoading: localAILoading, refetch: refetchLocalAI } = useQuery({
+  const { data: localAIStatus, isLoading: localAILoading, refetch: refetchLocalAI } = useQuery<LocalAIStatus>({
     queryKey: ["/api/ai/local/status"],
     refetchInterval: 30000
   });
 
-  const { data: russianLLMHealth, isLoading: russianLLMLoading, refetch: refetchRussianLLM } = useQuery({
-    queryKey: ["http://localhost:8080/health"],
-    queryFn: () => fetch("http://localhost:8080/health").then(res => res.json()),
+  const { data: russianLLMHealth, isLoading: russianLLMLoading, refetch: refetchRussianLLM } = useQuery<RussianLLMHealth>({
+    queryKey: ["/api/ai/russian/health"],
     refetchInterval: 30000
   });
 
