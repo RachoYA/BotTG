@@ -1,104 +1,120 @@
-import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useQuery } from "@tanstack/react-query";
+import { 
+  LayoutDashboard, 
+  MessageSquare, 
+  Calendar, 
+  Brain, 
+  Settings,
+  AlertTriangle,
+  Users
+} from "lucide-react";
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { data: stats } = useQuery({
-    queryKey: ['/api/dashboard/stats'],
-    refetchInterval: 10000,
+
+  // Get dashboard stats for sidebar metrics
+  const { data: stats = {} } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: () => fetch("/api/dashboard/stats").then(res => res.json()),
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  const isActive = (path: string) => location === path;
+  const navItems = [
+    {
+      href: "/",
+      label: "Главная панель",
+      icon: LayoutDashboard,
+      active: location === "/"
+    },
+    {
+      href: "/chats",
+      label: "Telegram чаты",
+      icon: MessageSquare,
+      active: location === "/chats"
+    },
+    {
+      href: "/analysis",
+      label: "Анализ переписки",
+      icon: Calendar,
+      active: location === "/analysis",
+      badge: stats.pendingAnalyses > 0 ? stats.pendingAnalyses : null
+    },
+    {
+      href: "/insights",
+      label: "AI Инсайты",
+      icon: Brain,
+      active: location === "/insights"
+    },
+    {
+      href: "/settings",
+      label: "Настройки",
+      icon: Settings,
+      active: location === "/settings"
+    }
+  ];
 
   return (
-    <div className="bg-white h-full w-64 border-r border-gray-200 flex flex-col">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-800">
-          TG Manager
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">AI Копилот</p>
+    <div className="w-64 h-full bg-white border-r border-gray-200 flex flex-col">
+      <div className="p-6">
+        <h1 className="text-xl font-bold text-gray-900">Conversation AI</h1>
+        <p className="text-sm text-gray-600">Контекстный анализ переписки</p>
       </div>
-      
-      <nav className="flex-1 px-4 py-6">
-        <ul className="space-y-2">
-          <li>
-            <Link 
-              href="/" 
-              className={`flex items-center px-4 py-3 rounded-lg font-medium ${
-                isActive('/') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
-              }`}
+
+      <Separator />
+
+      <nav className="flex-1 px-4 py-6 space-y-2">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <Button
+              variant={item.active ? "default" : "ghost"}
+              className="w-full justify-start"
+              size="sm"
             >
-              <i className="fas fa-tachometer-alt mr-3"></i>
-              Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link 
-              href="/chats" 
-              className={`flex items-center px-4 py-3 rounded-lg ${
-                isActive('/chats') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <i className="fas fa-comments mr-3"></i>
-              Чаты
-              {stats?.activeChats && stats.activeChats > 0 && (
+              <item.icon className="h-4 w-4 mr-3" />
+              {item.label}
+              {item.badge && (
                 <Badge variant="destructive" className="ml-auto">
-                  {stats.activeChats}
+                  {item.badge}
                 </Badge>
               )}
-            </Link>
-          </li>
-          <li>
-            <Link 
-              href="/tasks" 
-              className={`flex items-center px-4 py-3 rounded-lg ${
-                isActive('/tasks') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <i className="fas fa-tasks mr-3"></i>
-              Задачи
-              {stats?.urgentTasks && stats.urgentTasks > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.urgentTasks}
-                </Badge>
-              )}
-            </Link>
-          </li>
-          <li>
-            <Link 
-              href="/analytics" 
-              className={`flex items-center px-4 py-3 rounded-lg ${
-                isActive('/analytics') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <i className="fas fa-chart-line mr-3"></i>
-              Аналитика
-            </Link>
-          </li>
-          <li>
-            <Link 
-              href="/settings" 
-              className={`flex items-center px-4 py-3 rounded-lg ${
-                isActive('/settings') ? 'text-primary bg-blue-50' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <i className="fas fa-cog mr-3"></i>
-              Настройки
-            </Link>
-          </li>
-        </ul>
+            </Button>
+          </Link>
+        ))}
       </nav>
 
-      <div className="p-4 border-t">
-        <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            АП
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-800">Александр Петров</p>
-            <p className="text-xs text-gray-600">Руководитель</p>
-          </div>
+      <Separator />
+
+      <div className="p-4 space-y-3">
+        {/* Quick Stats */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Текущая активность</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Отслеживаемые чаты</span>
+                <span className="text-xs font-medium">{stats.activeChats || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Новые сообщения</span>
+                <span className="text-xs font-medium">{stats.unreadMessages || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Требует ответа</span>
+                <span className="text-xs font-medium text-red-600">{stats.responseRequiredChats || 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Status Indicator */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+          <span>Анализ активен</span>
         </div>
       </div>
     </div>

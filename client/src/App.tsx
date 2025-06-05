@@ -6,8 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import SettingsPage from "@/pages/settings";
 import ChatsPage from "@/pages/chats";
-import TasksPage from "@/pages/tasks";
-import AnalyticsPage from "@/pages/analytics";
+import AnalysisPage from "@/pages/analysis";
+import InsightsPage from "@/pages/insights";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,8 +15,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/chats" component={ChatsPage} />
-      <Route path="/tasks" component={TasksPage} />
-      <Route path="/analytics" component={AnalyticsPage} />
+      <Route path="/analysis" component={AnalysisPage} />
+      <Route path="/insights" component={InsightsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
