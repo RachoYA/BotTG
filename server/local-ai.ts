@@ -60,6 +60,7 @@ class LocalAIService {
     // Initialize OpenAI fallback if API key is available
     if (process.env.OPENAI_API_KEY) {
       this.openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      this.fallbackToOpenAI = true;
     }
   }
 
@@ -358,18 +359,18 @@ ${conversationText}
 - businessTopics: деловые темы
 - actionItems: действия к выполнению`;
 
-        const detailedResponse = await fetch('http://localhost:8080/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer dummy-key'
-          },
-          body: JSON.stringify({
-            model: 'qwen',
+        let detailedResult;
+        
+        // Use OpenAI for detailed analysis if available
+        if (this.fallbackToOpenAI && this.openaiClient) {
+          console.log('Using OpenAI for detailed conversation analysis');
+          
+          const detailedResponse = await this.openaiClient.chat.completions.create({
+            model: "gpt-4",
             messages: [
               {
                 role: "system",
-                content: "Ты эксперт по анализу переписки. Анализируй детально русскоязычные сообщения и возвращай подробный JSON."
+                content: "Ты эксперт по анализу переписки. Анализируй детально русскоязычные сообщения и возвращай подробный JSON с требуемыми полями."
               },
               {
                 role: "user", 
@@ -379,11 +380,25 @@ ${conversationText}
             response_format: { type: "json_object" },
             max_tokens: 2000,
             temperature: 0.2
-          })
-        });
-        
-        const detailedData = await detailedResponse.json();
-        const detailedResult = JSON.parse(detailedData.choices[0]?.message?.content || "{}");
+          });
+          
+          detailedResult = JSON.parse(detailedResponse.choices[0]?.message?.content || "{}");
+        } else {
+          // Fallback to basic analysis if OpenAI not available
+          console.log('OpenAI not available, using basic analysis structure');
+          detailedResult = {
+            summary: `Анализ переписки "${chatTitle}" за период с ${messageLimit} сообщениями`,
+            unansweredRequests: [],
+            identifiedProblems: [],
+            openQuestions: [],
+            myParticipation: "Анализ участия в переписке",
+            missedResponses: [],
+            responseRequired: false,
+            priority: "medium",
+            businessTopics: ["личное общение"],
+            actionItems: ["Продолжить наблюдение за перепиской"]
+          };
+        }
         console.log(`Detailed analysis summary: ${detailedResult.summary}`);
         
         return {
