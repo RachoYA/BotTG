@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { russianLLM } from "./russian-llm.js";
 
 // Configuration for local AI models
 interface LocalAIConfig {
@@ -8,12 +9,12 @@ interface LocalAIConfig {
   embeddingModel?: string;
 }
 
-// Default configuration for local AI
+// Default configuration for Russian LLM
 const defaultConfig: LocalAIConfig = {
-  baseURL: process.env.LOCAL_AI_BASE_URL || "http://localhost:1234/v1",
-  apiKey: process.env.LOCAL_AI_API_KEY || "lm-studio",
-  model: process.env.LOCAL_AI_MODEL || "qwen2.5-32b-instruct",
-  embeddingModel: process.env.LOCAL_AI_EMBEDDING_MODEL || "nomic-embed-text"
+  baseURL: "http://localhost:8080/v1",
+  apiKey: "russian-llm",
+  model: "russian-chat",
+  embeddingModel: "russian-embeddings"
 };
 
 class LocalAIService {
@@ -24,6 +25,9 @@ class LocalAIService {
 
   constructor(config: Partial<LocalAIConfig> = {}) {
     this.config = { ...defaultConfig, ...config };
+    
+    // Initialize Russian LLM service
+    this.initializeRussianLLM();
     
     // Initialize local AI client
     this.client = new OpenAI({
@@ -37,15 +41,32 @@ class LocalAIService {
     }
   }
 
+  private async initializeRussianLLM(): Promise<void> {
+    try {
+      await russianLLM.initialize();
+      console.log('Russian LLM service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Russian LLM service:', error);
+    }
+  }
+
   async testConnection(): Promise<boolean> {
     try {
+      // First try to check if Russian LLM service is running
+      const russianLLMStatus = await russianLLM.testConnection();
+      if (russianLLMStatus) {
+        console.log("Russian LLM service is running");
+        return true;
+      }
+
+      // Fallback to original test
       const response = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: [{ role: "user", content: "Test connection" }],
+        messages: [{ role: "user", content: "Тест соединения" }],
         max_tokens: 10
       });
       return response.choices?.[0]?.message?.content !== undefined;
-    } catch (error) {
+    } catch (error: any) {
       console.log("Local AI connection failed:", error.message);
       return false;
     }

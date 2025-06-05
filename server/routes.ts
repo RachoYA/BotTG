@@ -5,11 +5,20 @@ import { telegramService } from "./telegram.js";
 import { aiService } from "./ai.js";
 import { localAI } from "./local-ai.js";
 import { schedulerService } from "./scheduler.js";
+import { russianLLM } from "./russian-llm.js";
 import { insertTelegramChatSchema, insertPeriodAnalysisSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start services
   schedulerService.start();
+  
+  // Initialize Russian LLM service
+  try {
+    await russianLLM.initialize();
+    console.log('Russian LLM service started successfully');
+  } catch (error) {
+    console.error('Failed to start Russian LLM service:', error);
+  }
 
   // Local AI management routes
   app.get("/api/ai/local/status", async (req, res) => {
@@ -45,6 +54,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: "Configuration updated" });
     } catch (error) {
       res.status(500).json({ error: "Failed to update configuration" });
+    }
+  });
+
+  // Russian LLM management routes
+  app.get("/api/ai/russian/status", async (req, res) => {
+    try {
+      const isRunning = russianLLM.isServiceRunning();
+      const config = russianLLM.getConfig();
+      const testConnection = await russianLLM.testConnection();
+      
+      res.json({
+        running: isRunning,
+        connected: testConnection,
+        config: config,
+        baseURL: russianLLM.getBaseURL(),
+        lastTest: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get Russian LLM status" });
+    }
+  });
+
+  app.post("/api/ai/russian/toggle", async (req, res) => {
+    try {
+      const { enable } = req.body;
+      
+      if (enable) {
+        await russianLLM.initialize();
+        // Disable OpenAI fallback when Russian LLM is active
+        localAI.setFallbackMode(false);
+        res.json({ success: true, message: "Russian LLM service started, external fallback disabled" });
+      } else {
+        await russianLLM.shutdown();
+        // Re-enable OpenAI fallback when Russian LLM is disabled
+        localAI.setFallbackMode(true);
+        res.json({ success: true, message: "Russian LLM service stopped, external fallback enabled" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to toggle Russian LLM service" });
     }
   });
 
