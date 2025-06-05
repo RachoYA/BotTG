@@ -18,8 +18,11 @@ export class TelegramService {
   private authState: 'none' | 'phone_sent' | 'code_needed' | 'connected' = 'none';
 
   constructor() {
-    this.apiId = parseInt(process.env.TELEGRAM_API_ID || "24788533");
-    this.apiHash = process.env.TELEGRAM_API_HASH || "3a5e530327b9e7e8e90b54c6ab0259a1";
+    if (!process.env.TELEGRAM_API_ID || !process.env.TELEGRAM_API_HASH) {
+      throw new Error("TELEGRAM_API_ID and TELEGRAM_API_HASH must be provided in environment variables");
+    }
+    this.apiId = parseInt(process.env.TELEGRAM_API_ID);
+    this.apiHash = process.env.TELEGRAM_API_HASH;
     this.phoneNumber = process.env.TELEGRAM_PHONE_NUMBER || "";
     
     // Загружаем сессию из переменной окружения или файла
