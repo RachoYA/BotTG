@@ -292,18 +292,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get recent messages
-  app.get("/api/messages", async (req, res) => {
-    try {
-      const chatId = req.query.chatId as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const messages = await storage.getTelegramMessages(chatId, limit);
-      res.json(messages);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get messages" });
-    }
-  });
-
   // Toggle chat monitoring
   app.post("/api/telegram/toggle-monitoring", async (req, res) => {
     try {
@@ -497,11 +485,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/telegram/status", async (req, res) => {
     try {
-      res.json({ 
+      res.json({
         connected: telegramService.isClientConnected(),
         sessionString: telegramService.getSessionString(),
-        apiId: "24788533",
-        apiHash: "3a5e530327b9e7e8e90b54c6ab0259a1"
+        apiConfigured: Boolean(process.env.TELEGRAM_API_ID && process.env.TELEGRAM_API_HASH)
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get Telegram status" });
