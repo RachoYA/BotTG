@@ -98,7 +98,7 @@ export default function ChatsPage() {
   if (isLoading) {
     return (
       <div className="flex h-screen">
-        <Sidebar />
+        <MobileSidebar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-lg">Загрузка чатов...</div>
         </div>

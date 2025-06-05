@@ -37,7 +37,7 @@ export default function AnalysisPage() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      <MobileSidebar />
       <main className="flex-1 overflow-auto">
         <div className="p-6">
           <div className="mb-6">

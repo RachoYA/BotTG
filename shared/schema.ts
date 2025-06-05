@@ -151,9 +151,7 @@ export const insertMessageEmbeddingSchema = createInsertSchema(messageEmbeddings
   createdAt: true,
 });
 
-export const insertConversationContextSchema = createInsertSchema(conversationContexts).omit({
-  id: true,
-});
+export const insertConversationContextSchema = createInsertSchema(conversationContexts);
 
 export type MessageEmbedding = typeof messageEmbeddings.$inferSelect;
 export type InsertMessageEmbedding = z.infer<typeof insertMessageEmbeddingSchema>;
