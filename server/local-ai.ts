@@ -203,7 +203,22 @@ Respond with JSON containing:
         maxTokens: 500
       });
 
-      return JSON.parse(response);
+      // Try to parse JSON, if it fails, extract JSON from text
+      try {
+        return JSON.parse(response);
+      } catch (parseError) {
+        // If response is plain text, try to extract JSON or create structured response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        // Fallback: create structured response from text
+        return {
+          summary: response.trim(),
+          keyTopics: [],
+          relationship: "business"
+        };
+      }
     } catch (error) {
       console.error('Error analyzing conversation context:', error);
       return {
