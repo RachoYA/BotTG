@@ -1,0 +1,284 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import Sidebar from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CheckCircle, Clock, AlertTriangle, Calendar, MessageSquare, X, Trash2, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+
+// Компонент модального окна для просмотра чата
+function ChatModal({ chatId, isOpen, onClose }: { chatId: string; isOpen: boolean; onClose: () => void }) {
+  const { data: messages, isLoading } = useQuery({
+    queryKey: ['/api/chats', chatId, 'messages'],
+    queryFn: () => fetch(`/api/chats/${chatId}/messages`).then(res => res.json()),
+    enabled: isOpen && !!chatId,
+  });
+
+  const { data: chats } = useQuery({
+    queryKey: ['/api/chats'],
+    enabled: isOpen && !!chatId,
+  });
+
+  const chat = chats?.find((c: any) => c.chatId === chatId);
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Переписка: {chat?.title || `Чат ${chatId}`}</span>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto max-h-[60vh] space-y-3 p-4">
+          {isLoading ? (
+            <div className="text-center py-8">Загрузка сообщений...</div>
+          ) : messages && messages.length > 0 ? (
+            messages.map((message: any) => (
+              <div key={message.id} className="border-b pb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-sm text-blue-600">
+                    {message.senderName || 'Неизвестный'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(message.timestamp).toLocaleString('ru-RU')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700">{message.text}</p>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Сообщения не найдены
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function TasksPage() {
+  const { toast } = useToast();
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ['/api/tasks'],
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      return await apiRequest(`/api/tasks/${id}/status`, "PATCH", { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      toast({
+        title: "Задача обновлена",
+        description: "Статус задачи изменен",
+      });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/tasks/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      toast({
+        title: "Задача удалена",
+        description: "Задача успешно удалена из системы",
+      });
+    },
+  });
+
+  const getUrgencyIcon = (urgency: string) => {
+    switch (urgency) {
+      case 'high': return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      case 'medium': return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'low': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      default: return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getUrgencyLabel = (urgency: string) => {
+    switch (urgency) {
+      case 'high': return 'Высокий';
+      case 'medium': return 'Средний';
+      case 'low': return 'Низкий';
+      default: return 'Не определен';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Ожидает';
+      case 'in_progress': return 'В работе';
+      case 'completed': return 'Завершено';
+      default: return 'Не определен';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-lg">Загрузка задач...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Задачи</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Извлеченные задачи из Telegram сообщений
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">
+                {Array.isArray(tasks) ? tasks.length : 0} задач
+              </Badge>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto p-6">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Задача</TableHead>
+                    <TableHead>Приоритет</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Источник</TableHead>
+                    <TableHead>Дедлайн</TableHead>
+                    <TableHead>Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(tasks) && tasks.map((task: any) => (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <div className="font-medium">{task.title}</div>
+                          {task.description && (
+                            <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {task.description}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {getUrgencyIcon(task.urgency)}
+                          <span className="ml-2">{getUrgencyLabel(task.urgency)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={task.status}
+                          onValueChange={(status) => 
+                            updateTaskMutation.mutate({ id: task.id, status })
+                          }
+                          disabled={updateTaskMutation.isPending}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Ожидает</SelectItem>
+                            <SelectItem value="in_progress">В работе</SelectItem>
+                            <SelectItem value="completed">Завершено</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {task.chatId && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto text-blue-600"
+                            onClick={() => setSelectedChatId(task.chatId)}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Чат
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {task.deadline ? (
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {new Date(task.deadline).toLocaleDateString('ru-RU')}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateTaskMutation.mutate({ id: task.id, status: 'completed' })}
+                            disabled={updateTaskMutation.isPending || task.status === 'completed'}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteTaskMutation.mutate(task.id)}
+                            disabled={deleteTaskMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {(!tasks || tasks.length === 0) && (
+                <div className="text-center py-12 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Нет задач</p>
+                  <p className="text-sm">Задачи будут автоматически извлечены из Telegram сообщений</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+
+      {/* Модальное окно для просмотра чата */}
+      <ChatModal 
+        chatId={selectedChatId || ""} 
+        isOpen={!!selectedChatId} 
+        onClose={() => setSelectedChatId(null)} 
+      />
+    </div>
+  );
+}

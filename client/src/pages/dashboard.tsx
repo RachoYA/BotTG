@@ -2,19 +2,14 @@ import MobileSidebar from "@/components/mobile-sidebar";
 import PeriodAnalysis from "@/components/period-analysis";
 import DailySummary from "@/components/daily-summary";
 import AIInsights from "@/components/ai-insights";
-import AnalysisDetailModal from "@/components/analysis-detail-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { MessageSquare, Calendar, Users, Brain, AlertTriangle, TrendingUp, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
 
 export default function Dashboard() {
-  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
-  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
-
   // Get dashboard stats
   const { data: stats = {} } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -153,14 +148,7 @@ export default function Dashboard() {
                   ) : (
                     <div className="space-y-4">
                       {recentAnalyses.map((analysis: any) => (
-                        <div 
-                          key={analysis.id} 
-                          className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => {
-                            setSelectedAnalysis(analysis);
-                            setIsAnalysisModalOpen(true);
-                          }}
-                        >
+                        <div key={analysis.id} className="p-4 border rounded-lg">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
@@ -269,13 +257,6 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
-
-      {/* Analysis Detail Modal */}
-      <AnalysisDetailModal
-        analysis={selectedAnalysis}
-        open={isAnalysisModalOpen}
-        onOpenChange={setIsAnalysisModalOpen}
-      />
     </div>
   );
 }
