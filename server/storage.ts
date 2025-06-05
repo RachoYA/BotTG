@@ -46,6 +46,7 @@ export interface IStorage {
   getUrgentTasks(): Promise<ExtractedTask[]>;
   createExtractedTask(task: InsertExtractedTask): Promise<ExtractedTask>;
   updateTaskStatus(id: number, status: string): Promise<ExtractedTask | undefined>;
+  deleteTask(id: number): Promise<void>;
 
   // Daily Summaries
   getDailySummary(date: string): Promise<DailySummary | undefined>;
@@ -368,6 +369,10 @@ export class MemStorage implements IStorage {
     };
     this.extractedTasks.set(id, updatedTask);
     return updatedTask;
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    this.extractedTasks.delete(id);
   }
 
   // Daily Summaries
